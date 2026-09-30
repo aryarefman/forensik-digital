@@ -1,0 +1,9 @@
+# Salinan barang bukti asli (agar tidak terekspos ke publik)
+kelompok 4/tugas/
+kelompok 4/rhythm game/
+kelompok 4/analysis_artifacts/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
