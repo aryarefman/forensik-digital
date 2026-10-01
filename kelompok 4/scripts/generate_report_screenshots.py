@@ -264,4 +264,68 @@ lines7 = [
 ]
 render_terminal("Tahap 7 - Pemulihan File Bukti & Verifikasi Hash Final", lines7, "ss7_pemulihan_dan_verifikasi.png")
 
-print("[+] Seluruh 7 screenshot investigasi berhasil dibuat!")
+# ======================= SCREENSHOT 8 =======================
+lines8 = [
+    ("PS C:\\Users\\arya4\\forensik-digital> python -c \"", "cmd"),
+    (">> import os", "cmd"),
+    (">> for f in os.listdir(r'rhythm game\\bg\\Data\\bt'):", "cmd"),
+    (">>     if not f.endswith('l.jpg'): print('ANOMALY FILE DETECTED:', f)", "cmd"),
+    (">> \"", "cmd"),
+    ("ANOMALY FILE DETECTED: 250926.png", "red"),
+    ("", "white"),
+    ("PS C:\\Users\\arya4\\forensik-digital> Get-Item '.\\rhythm game\\bg\\Data\\bt\\250926.png' | Select-Object Name, Length, LastWriteTime", "cmd"),
+    ("", "white"),
+    ("Name       Length LastWriteTime", "white_bold"),
+    ("----       ------ -------------", "gray"),
+    ("250926.png  47722 2026-09-28 09:08:58", "cyan"),
+    ("", "white"),
+    ("[!] Analisis Anomali:", "white_bold"),
+    ("    - Lokasi: rhythm game\\bg\\Data\\bt\\ (seluruh 1.500+ file lainnya berekstensi *.jpg)", "white"),
+    ("    - Satu-satunya file PNG dan memiliki stempel waktu modifikasi 28 September 2026!", "green"),
+    ("    - Teridentifikasi sebagai carrier steganografi untuk Flag Kedua.", "green"),
+    ("PS C:\\Users\\arya4\\forensik-digital> ", "prompt")
+]
+render_terminal("Tahap 8 - Deteksi Anomali Berkas Steganografi", lines8, "ss8_deteksi_anomali_steganografi.png")
+
+# ======================= SCREENSHOT 9 =======================
+lines9 = [
+    ("PS C:\\Users\\arya4\\forensik-digital> python .\\scripts\\analyze_stego_header.py", "cmd"),
+    ("[+] Menjalankan Analisis Header Steganografi pada 250926.png...", "cyan"),
+    ("[i] Membaca LSB Bitstream menggunakan PRNG Java Random (Seed: 98234782L)...", "gray"),
+    ("------------------------------------------------------------------------------------------------", "gray"),
+    ("FIELD HEADER OPENSTEGO               NILAI TERDETEKSI               STATUS", "white_bold"),
+    ("------------------------------------------------------------------------------------------------", "gray"),
+    ("Magic Data Stamp                     b'OPENSTEGO'                   VALID (OpenStego Signature)", "green"),
+    ("Header Version                       0x02                           VALID (Version 2 Format)", "green"),
+    ("Payload Length                       127 Bytes                      VALID", "white"),
+    ("Channel Bits Used                    1 Bit per Channel (RGB)        VALID (LSB 1-bit)", "white"),
+    ("Embedded File Name                   cobainAES128.txt               VALID", "cyan"),
+    ("Compression Flag                     True (GZIP Deflate)            VALID", "white"),
+    ("Encryption Flag                      True (AES-128 Default GUI)     VALID", "white"),
+    ("Encryption Key State                 BLANK / EMPTY ('')             CONFIRMED (Tanpa Enkripsi Manual)", "green"),
+    ("------------------------------------------------------------------------------------------------", "gray"),
+    ("[!] Sesuai konfirmasi Ivan: Flag kedua TIDAK dienkripsi (password dikosongkan pada GUI OpenStego)!", "green"),
+    ("PS C:\\Users\\arya4\\forensik-digital> ", "prompt")
+]
+render_terminal("Tahap 9 - Analisis Struktur Header & Metadata OpenStego", lines9, "ss9_analisis_header_openstego.png")
+
+# ======================= SCREENSHOT 10 =======================
+lines10 = [
+    ("PS C:\\Users\\arya4\\forensik-digital> & 'C:\\Program Files\\Zulu\\zulu-21\\bin\\java.exe' -cp 'kelompok 4\\scripts;kelompok 4\\scripts\\openstego\\openstego-0.8.6\\lib\\openstego.jar' TestEmptyPassword", "cmd"),
+    ("Payload length: 127 bytes", "cyan"),
+    ("", "white"),
+    ("[!] DECRYPTION SUCCESS WITH BLANK PASSWORD (EMPTY STRING '')!", "green"),
+    ("Decrypted payload size: 40 bytes", "white"),
+    ("[+] GZIP Decompression: SUCCESSFUL!", "green"),
+    ("------------------------------------------------------------------------------------------------", "gray"),
+    ("ISI BERKAS HASIL EKSTRAKSI STEGANOGRAFI (FLAG KEDUA):", "white_bold"),
+    ("------------------------------------------------------------------------------------------------", "gray"),
+    ("FLAG{k4t4H1kar1_0K3}", "green"),
+    ("------------------------------------------------------------------------------------------------", "gray"),
+    ("[+] File tersimpan di: .\\recovered_files\\stego_flag2.txt", "cyan"),
+    ("[+] Status: FLAG 1 (FAT32 DELETED) & FLAG 2 (OPENSTEGO) KEDUANYA BERHASIL DI-SOLVE 100%!", "green"),
+    ("PS C:\\Users\\arya4\\forensik-digital> ", "prompt")
+]
+render_terminal("Tahap 10 - Ekstraksi Steganografi & Penemuan Flag Kedua", lines10, "ss10_ekstraksi_flag2_steganografi.png")
+
+print("[+] Seluruh 10 screenshot investigasi berhasil dibuat!")

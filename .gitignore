@@ -3,7 +3,18 @@ kelompok 4/tugas/
 kelompok 4/rhythm game/
 kelompok 4/analysis_artifacts/
 
-# Python cache
+# Python cache & Java binaries
 __pycache__/
 *.py[cod]
 *$py.class
+*.class
+
+# Wordlists & temporary forensic scratch files
+kelompok 4/scripts/*.txt
+kelompok 4/scripts/*.lst
+kelompok 4/scripts/openstego/
+kelompok 4/scripts/Test*
+kelompok 4/scripts/FastCracker*
+kelompok 4/scripts/DecryptTester*
+kelompok 4/scripts/inspect_gui.py
+kelompok 4/scripts/test_openstego.py
