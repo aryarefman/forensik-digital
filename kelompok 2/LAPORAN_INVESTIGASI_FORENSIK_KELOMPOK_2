@@ -1,0 +1,404 @@
+# DIGITAL FORENSIC INVESTIGATION REPORT (DFIR)
+
+## CASE REF: `DFIR-2026-FD-KEL2`
+### Investigasi Barang Bukti Digital Kelompok 2
+
+---
+
+## DOCUMENT CONTROL & ADMINISTRATIVE DATA
+
+| Parameter Administrasi | Rincian Informasi Forensik |
+|---|---|
+| **Nomor Kasus / Case ID** | `DFIR-2026-FD-KEL2-001` |
+| **Judul Kasus** | Investigasi Forensik dan Identifikasi File Tersamar pada Barang Bukti Kelompok 2 |
+| **Tim Penyelidik (Examiner)** | **[Isi Nomor Kelompok Kalian]** |
+| **Subjek Barang Bukti** | Data digital `KEBELET PSDM` dari Kelompok 2 |
+| **Tools Utama** | Autopsy 4.23.1 |
+| **Jenis Akuisisi yang Dianalisis** | Logical Files |
+| **Tanggal Analisis** | 2 Oktober 2026 |
+| **Status Akhir Investigasi** | **SOLVED** |
+| **Jumlah Flag Ditemukan** | 1 Flag |
+
+### Riwayat Revisi Dokumen
+
+| Versi | Tanggal | Penyelidik | Deskripsi |
+|---|---|---|---|
+| `v1.0` | 2026-10-02 | [Kelompok kalian] | Analisis awal barang bukti dan identifikasi tipe file menggunakan Autopsy |
+| `v1.1` | 2026-10-02 | [Kelompok kalian] | Identifikasi file tersamar dan penemuan flag |
+
+---
+
+# 1. RINGKASAN EKSEKUTIF
+
+## 1.1 Ikhtisar Kasus
+
+Berdasarkan penugasan mata kuliah Forensik Digital, tim investigator melakukan pemeriksaan terhadap barang bukti digital dari **Kelompok 2** dengan nama `KEBELET PSDM`. Tujuan pemeriksaan adalah menemukan kata kunci atau *flag* yang sengaja disembunyikan di antara data pada barang bukti tanpa melakukan perubahan terhadap data yang dianalisis.
+
+Analisis dilakukan menggunakan **Autopsy 4.23.1**. Data dimasukkan sebagai **Logical Files**, kemudian dilakukan proses *ingest* menggunakan modul **File Type Identification** dan **Extension Mismatch Detector**. Pemeriksaan selanjutnya difokuskan pada klasifikasi tipe file berdasarkan MIME type.
+
+## 1.2 Ringkasan Temuan Kunci
+
+Hasil pemeriksaan menunjukkan adanya sebuah file bernama:
+
+`KONMED 5.png`
+
+File tersebut memiliki ekstensi `.png`, sehingga berdasarkan nama file seharusnya merupakan sebuah gambar PNG. Namun, hasil **File Type Identification** pada Autopsy mengklasifikasikan file tersebut sebagai:
+
+`text/plain`
+
+File juga hanya memiliki ukuran **25 byte**, berbeda dengan karakteristik file gambar pada umumnya.
+
+Ketika isi file diperiksa melalui **Text Viewer** pada Autopsy, ditemukan *flag*:
+
+```text
+FLAG{F0r3ns1k_K3l0mp0k_2}
+```
+
+Dengan demikian, sasaran investigasi terhadap barang bukti Kelompok 2 dinyatakan **SOLVED**.
+
+## 1.3 Matriks Status Investigasi
+
+| ID Sasaran | Artefak | Teknik Penyembunyian | Hasil | Status |
+|---|---|---|---|---|
+| **OBJ-01** | `KONMED 5.png` | File masquerading / extension mismatch | `FLAG{F0r3ns1k_K3l0mp0k_2}` | **SOLVED** |
+
+---
+
+# 2. METODOLOGI FORENSIK & LINGKUNGAN UJI
+
+## 2.1 Pendekatan Investigasi
+
+Investigasi dilakukan dengan prinsip pemeriksaan non-destruktif terhadap salinan data yang diterima. Hal ini dilakukan untuk menghindari perubahan terhadap barang bukti selama proses pencarian *flag*.
+
+Tahapan pemeriksaan yang dilakukan adalah:
+
+**Penerimaan Data → Pembuatan Case → Penambahan Logical Files → Ingest → File Type Identification → MIME Type Analysis → Pemeriksaan File Anomali → Validasi Flag**
+
+Pendekatan ini sesuai dengan ketentuan penugasan yang mengharuskan investigator menjaga barang bukti agar tidak mengalami perubahan data selama proses investigasi. Panduan Penugasan Forensik Digi…
+
+## 2.2 Lingkungan Analisis
+
+| Komponen | Keterangan |
+|---|---|
+| **Forensic Tool** | Autopsy |
+| **Versi** | 4.23.1 |
+| **Data Source Type** | Logical Files |
+| **File Type Analysis** | File Type Identification |
+| **Anomaly Analysis** | Extension Mismatch Detector |
+| **Content Inspection** | Text Viewer dan Hex Viewer |
+| **Platform** | Windows |
+
+## 2.3 Ingest Modules
+
+Modul yang digunakan pada proses pemeriksaan adalah:
+
+- **File Type Identification**
+- **Extension Mismatch Detector**
+- **Keyword Search**
+
+Dari modul tersebut, **File Type Identification** menjadi bagian utama dalam penemuan barang bukti karena memungkinkan file dikelompokkan berdasarkan tipe konten/MIME type.
+
+---
+
+# 3. RANTAI PENJAGAAN BUKTI DAN INTEGRITAS
+
+## 3.1 Identifikasi Barang Bukti
+
+| Parameter | Keterangan |
+|---|---|
+| **Item ID** | `EVD-2026-KEL2-001` |
+| **Pemilik Barang Bukti** | Kelompok 2 |
+| **Nama Data** | `KEBELET PSDM` |
+| **Jenis Analisis** | Logical File Analysis |
+| **Status** | Salinan data digunakan untuk proses analisis |
+
+Barang bukti pada penugasan berasal dari kelompok lain dan dipertukarkan sesuai mekanisme rotasi yang ditentukan oleh kelas. Setiap kelompok diwajibkan menyelesaikan barang bukti kelompok target pada periode investigasi. Panduan Penugasan Forensik Digi…
+
+## 3.2 Preservasi Data
+
+Analisis dilakukan terhadap data yang telah disalin ke lingkungan kerja investigator. File sumber tidak diedit selama proses pemeriksaan menggunakan Autopsy.
+
+**Catatan:** nilai hash media fisik sebelum dan setelah investigasi belum didokumentasikan pada pemeriksaan ini. Oleh karena itu, laporan ini tidak menyatakan verifikasi integritas bit-per-bit terhadap media fisik asli.
+
+---
+
+# 4. KRONOLOGI & TAHAPAN INVESTIGASI FORENSIK
+
+## FASE A: PERSIAPAN DAN INGEST DATA
+
+### TAHAP 1: PEMBUATAN CASE AUTOPSY
+
+**Tindakan:**  
+Membuat *case* baru pada Autopsy 4.23.1 dengan nama:
+
+`Investigasi KEBELETPSDM`
+
+Case digunakan sebagai lingkungan terisolasi untuk melakukan pemeriksaan terhadap barang bukti Kelompok 2.
+
+**Hasil:**  
+Case berhasil dibuat dan siap menerima data source.
+
+**Dokumentasi Bukti:**
+
+`[Masukkan screenshot pembuatan/case Autopsy jika tersedia]`
+
+*Gambar 1. Case investigasi barang bukti Kelompok 2 pada Autopsy.*
+
+---
+
+### TAHAP 2: PENAMBAHAN DATA SOURCE
+
+**Tindakan:**  
+Data `KEBELET PSDM` dimasukkan ke Autopsy menggunakan tipe data source **Logical Files**.
+
+Autopsy membuat host:
+
+`LogicalFileSet_1 Host`
+
+**Hasil:**  
+Struktur data berhasil dibaca oleh Autopsy dan tersedia untuk proses *ingest* dan analisis.
+
+**Dokumentasi Bukti:**
+
+`[Masukkan screenshot LogicalFileSet_1 Host]`
+
+*Gambar 2. Logical Files barang bukti berhasil ditambahkan sebagai data source.*
+
+---
+
+### TAHAP 3: KONFIGURASI INGEST MODULES
+
+**Tindakan:**  
+Menjalankan proses *ingest* dengan mengaktifkan modul:
+
+- File Type Identification
+- Extension Mismatch Detector
+- Keyword Search
+
+**Tujuan:**  
+Mengidentifikasi tipe file berdasarkan karakteristik konten dan mendeteksi kemungkinan ketidaksesuaian antara ekstensi file dengan tipe data sebenarnya.
+
+**Dokumentasi Bukti:**
+
+`[Masukkan screenshot Run Ingest Modules]`
+
+*Gambar 3. Konfigurasi modul ingest untuk pemeriksaan tipe file.*
+
+---
+
+# FASE B: IDENTIFIKASI ANOMALI FILE
+
+### TAHAP 4: ANALISIS BERDASARKAN MIME TYPE
+
+**Tindakan:**  
+Hasil *ingest* diperiksa melalui menu:
+
+`File Views → File Types → By MIME Type`
+
+**Hasil Pengamatan:**
+
+Autopsy mengelompokkan barang bukti ke beberapa tipe, antara lain:
+
+- `application/pdf`
+- `audio/mp4`
+- `image/png`
+- `image/jpeg`
+- `text/plain`
+
+Pada kategori gambar ditemukan:
+
+- PNG: **75 file**
+- JPEG: **658 file**
+
+Sementara itu, ditemukan hanya:
+
+- `text/plain`: **1 file**
+
+Keberadaan hanya satu file `text/plain` menjadi anomali yang kemudian diperiksa lebih lanjut.
+
+**Dokumentasi Bukti:**
+
+`[Masukkan screenshot MIME Type yang menunjukkan text → plain (1)]`
+
+*Gambar 4. Hasil File Type Identification menunjukkan satu file dengan MIME type text/plain.*
+
+---
+
+### TAHAP 5: IDENTIFIKASI FILE MENCURIGAKAN
+
+**Tindakan:**  
+Kategori:
+
+`text → plain (1)`
+
+dibuka untuk mengetahui identitas file.
+
+**Hasil Pengamatan:**
+
+Autopsy menampilkan:
+
+| Atribut | Nilai |
+|---|---|
+| **Nama File** | `KONMED 5.png` |
+| **Ekstensi** | `.png` |
+| **MIME Type** | `text/plain` |
+| **Ukuran** | 25 byte |
+| **Status** | Allocated |
+
+Temuan ini menunjukkan adanya ketidaksesuaian antara ekstensi file dengan tipe konten sebenarnya.
+
+File menggunakan ekstensi `.png`, tetapi Autopsy mengidentifikasinya sebagai **plain text**.
+
+**Dokumentasi Bukti:**
+
+`[Masukkan screenshot KONMED 5.png pada kategori text/plain]`
+
+*Gambar 5. File KONMED 5.png teridentifikasi sebagai text/plain dengan ukuran 25 byte.*
+
+---
+
+# FASE C: PEMERIKSAAN KONTEN DAN VALIDASI FLAG
+
+### TAHAP 6: PEMERIKSAAN TEXT CONTENT
+
+**Tindakan:**  
+File `KONMED 5.png` dipilih dan diperiksa menggunakan tab **Text** pada Autopsy.
+
+**Hasil Pengamatan:**
+
+Isi file dapat dibaca secara langsung sebagai plaintext:
+
+```text
+FLAG{F0r3ns1k_K3l0mp0k_2}
+```
+
+Hal ini mengonfirmasi bahwa file bukan merupakan gambar PNG sebagaimana ditunjukkan oleh ekstensi nama file, melainkan sebuah file teks yang berisi *flag*.
+
+**Dokumentasi Bukti:**
+
+Gunakan **screenshot terakhir yang tadi kamu kirim**, karena paling kuat untuk bagian ini.
+
+*Gambar 6. Text Viewer Autopsy menampilkan flag yang tersimpan di dalam KONMED 5.png.*
+
+---
+
+### TAHAP 7: VALIDASI TEMUAN
+
+Temuan kemudian divalidasi berdasarkan tiga indikator:
+
+| Indikator | Hasil |
+|---|---|
+| Ekstensi nama file | `.png` |
+| MIME type aktual | `text/plain` |
+| Ukuran file | 25 byte |
+| Konten | `FLAG{F0r3ns1k_K3l0mp0k_2}` |
+
+Berdasarkan indikator tersebut, `KONMED 5.png` merupakan file teks yang disamarkan menggunakan ekstensi gambar.
+
+**Status: `VALIDATED / SOLVED`**
+
+---
+
+# 5. ANALISIS TEKNIK PENYEMBUNYIAN
+
+Teknik yang digunakan pada barang bukti Kelompok 2 adalah **file masquerading melalui extension mismatch**.
+
+Secara sederhana, teknik tersebut dilakukan dengan memberikan ekstensi yang tidak sesuai dengan isi sebenarnya:
+
+```text
+                 [KONMED 5.png]
+                       |
+              Ekstensi menunjukkan
+                    IMAGE
+                       |
+                    .png
+                       |
+              -----------------
+                       |
+              Analisis MIME Type
+                       |
+                       v
+                 text/plain
+                       |
+                       v
+       FLAG{F0r3ns1k_K3l0mp0k_2}
+```
+
+Pada pemeriksaan biasa berdasarkan nama file, `KONMED 5.png` terlihat seperti file gambar. Namun, identifikasi berdasarkan tipe konten menunjukkan bahwa file tersebut merupakan plain text.
+
+Teknik ini memanfaatkan kecenderungan pengguna untuk menganggap ekstensi sebagai representasi tipe file sebenarnya. Dalam pemeriksaan forensik, ekstensi tidak dapat menjadi satu-satunya dasar identifikasi sehingga perlu dibandingkan dengan karakteristik konten file.
+
+---
+
+# 6. MATRIKS BARANG BUKTI
+
+| ID Bukti | Nama Artefak | Ekstensi | Tipe Aktual | Ukuran | Peran |
+|---|---|---:|---|---:|---|
+| **K2-F1** | `KONMED 5.png` | `.png` | `text/plain` | **25 B** | File pembawa flag |
+
+### Flag yang Berhasil Ditemukan
+
+```text
+FLAG{F0r3ns1k_K3l0mp0k_2}
+```
+
+**Jumlah sasaran ditemukan: 1**  
+**Status kasus: SOLVED**
+
+---
+
+# 7. PANDUAN REPRODUKSI INDEPENDEN
+
+Temuan dapat direproduksi menggunakan Autopsy dengan prosedur berikut:
+
+```text
+1. Buka Autopsy 4.23.1
+2. Buat New Case
+3. Add Data Source
+4. Pilih Logical Files
+5. Masukkan data KEBELET PSDM
+6. Jalankan File Type Identification
+7. Buka File Views
+8. Pilih File Types
+9. Pilih By MIME Type
+10. Buka text → plain
+11. Pilih KONMED 5.png
+12. Buka tab Text
+```
+
+Hasil yang diharapkan:
+
+```text
+Nama     : KONMED 5.png
+Size     : 25 bytes
+MIME     : text/plain
+Content  : FLAG{F0r3ns1k_K3l0mp0k_2}
+```
+
+Dengan prosedur tersebut, investigator lain dapat melakukan pemeriksaan ulang terhadap barang bukti dan memperoleh temuan yang sama.
+
+---
+
+# 8. PERNYATAAN INTEGRITAS INVESTIGASI
+
+Investigasi terhadap data Kelompok 2 dilakukan menggunakan Autopsy 4.23.1 dengan pemeriksaan terhadap salinan data sebagai **Logical Files**.
+
+Selama proses analisis, pemeriksaan dilakukan melalui lingkungan Autopsy tanpa melakukan pengeditan terhadap file yang dianalisis. Temuan diperoleh melalui proses identifikasi tipe file, analisis MIME type, dan pemeriksaan konten.
+
+Berdasarkan hasil pemeriksaan, ditemukan satu file tersamar:
+
+**`KONMED 5.png`**
+
+yang memiliki tipe aktual:
+
+**`text/plain`**
+
+dan menyimpan *flag*:
+
+```text
+FLAG{F0r3ns1k_K3l0mp0k_2}
+```
+
+### STATUS AKHIR
+
+**CASE SOLVED**
