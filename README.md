@@ -1,161 +1,145 @@
 # 🔍 Digital Forensics Investigation Repository
-### Mata Kuliah: Forensik Digital | Kasus Barang Bukti: Kelompok 4
-### Tim Penyelidik: **Kelompok 3** | Status Kasus: **`CASE CLOSED (100% SOLVED)`**
+### Mata Kuliah: Forensik Digital | Kasus Barang Bukti: Kelompok 4 & Kelompok 5
+### Tim Penyelidik: **Kelompok 3** | Status Kasus: **`ALL CASES CLOSED (100% SOLVED)`**
 
 ---
 
 <p align="center">
   <img src="https://img.shields.io/badge/STANDARDS-ISO%2FIEC%2027037%20%7C%20NIST%20SP%20800--86-blue?style=for-the-badge" alt="Standards">
-  <img src="https://img.shields.io/badge/STATUS-CASE%20SOLVED-success?style=for-the-badge" alt="Status">
+  <img src="https://img.shields.io/badge/STATUS-ALL%20CASES%20SOLVED-success?style=for-the-badge" alt="Status">
   <img src="https://img.shields.io/badge/INTEGRITY-READ--ONLY%20PRESERVED-green?style=for-the-badge" alt="Integrity">
-  <img src="https://img.shields.io/badge/FLAGS-2%20%2F%202%20RECOVERED-orange?style=for-the-badge" alt="Flags">
+  <img src="https://img.shields.io/badge/EXAMINER-KELOMPOK%203-purple?style=for-the-badge" alt="Examiner">
 </p>
 
 ---
 
-## 📌 Executive Summary
+## 📌 Executive Overview
 
-Repositori ini memuat seluruh dokumentasi investigasi, rantai bukti (*chain of custody*), skrip forensik, serta berkas bukti hasil pemulihan digital forensics dari barang bukti fisik Flashdisk **Kelompok 4** (Volume Label: `IV`, File System: `FAT32`).
+Repositori ini memuat seluruh berkas dokumentasi investigasi, rantai bukti (*chain of custody*), skrip analisis forensik, tangkapan layar autentik, serta artefak bukti hasil pemulihan digital forensics dari dua media penyimpanan fisik USB Flashdisk:
+1. **Kasus 1 & 2 (Kelompok 4)**: USB Flashdisk Volume `IV` (Kapasitas: 7.44 GB, FAT32)
+2. **Kasus 3 (Kelompok 5)**: USB Flashdisk Volume `USB DISK` (Kapasitas: 28.64 GB, FAT32)
 
-Investigasi diselesaikan oleh **Kelompok 3** dengan memenuhi standar kepatuhan **ISO/IEC 27037:2012** (*Digital Evidence Handling Techniques*) dan **NIST SP 800-86**. Seluruh barang bukti asli pada `Drive D:\` dijaga dalam kondisi *strictly read-only* tanpa modifikasi 1 byte pun.
-
-### 🏆 Hasil Akhir Temuan Bukti (Flags Solved)
-
-| Sasaran Bukti | Metode Penyembunyian | Lokasi Klaster / File Pembawa | Kata Kunci / Flag | Makna Semantik |
-| :---: | :---: | :---: | :---: | :--- |
-| **Kasus 1** | **FAT32 Deleted Entry Carving** | Sektor Klaster `729073` (`/tugas`) | `FLAG{F1L3nY4DiH4pu5}` | *"File-nya Dihapus"* |
-| **Kasus 2** | **OpenStego LSB Steganography** | `rhythm game\bg\Data\bt\250926.png` | `FLAG{k4t4H1kar1_0K3}` | *"Kata Hikari OKE"* |
-
-> 📄 **Laporan Lengkap Resmi (Court-Admissible DFIR Report)** dapat dibaca pada:  
-> 👉 [**`kelompok 4/LAPORAN_INVESTIGASI_FORENSIK_KELOMPOK_4.md`**](./kelompok%204/LAPORAN_INVESTIGASI_FORENSIK_KELOMPOK_4.md)
+Seluruh investigasi diselesaikan secara independen oleh **Kelompok 3** dengan memenuhi standar kepatuhan internasional **ISO/IEC 27037:2012** (*Digital Evidence Handling Techniques*), **NIST SP 800-86**, dan **RFC 3227**. Seluruh barang bukti fisik asli pada drive eksternal dijaga dalam status *strictly read-only* tanpa modifikasi 1 byte pun.
 
 ---
 
-## 📑 Daftar Isi Cepat
+## 🏆 Ringkasan Hasil Temuan Bukti (Flags Solved)
 
-1. [Spesifikasi Media Barang Bukti](#-spesifikasi-media-barang-bukti)
-2. [Alur Metodologi Forensik (10 Tahapan)](#-alur-metodologi-forensik-10-tahapan)
-3. [Galeri Screenshot Bukti Autentik](#-galeri-screenshot-bukti-autentik)
-4. [Tabel Hash Integritas Kriptografis](#-tabel-hash-integritas-kriptografis)
-5. [Struktur Folder Repositori](#-struktur-folder-repositori)
-6. [Panduan Reproduksi Independen](#-panduan-reproduksi-independen)
+| Subjek Kasus | Target Bukti | Teknik Anti-Forensik | Format Penanda | Nilai Key / Flag | Makna Semantik |
+| :---: | :---: | :---: | :---: | :---: | :--- |
+| **Kelompok 4** | Kasus 1 | FAT32 Directory Deletion (`0xE5`) | Standar `FLAG{}` | `FLAG{F1L3nY4DiH4pu5}` | *"File-nya Dihapus"* |
+| **Kelompok 4** | Kasus 2 | OpenStego LSB Steganography | Standar `FLAG{}` | `FLAG{k4t4H1kar1_0K3}` | *"Kata Hikari OKE"* |
+| **Kelompok 5** | Kasus 3 | JPEG EOI Trailing Data Overlay | **Khusus** `CODENAME{}` | `CODENAME{4P0ST3L_P3T3R_0F_GL0RY}` | *"Apostle Peter of Glory"* (Manhwa Killer Peter) |
 
----
-
-## 💾 Spesifikasi Media Barang Bukti
-
-- **Item ID Bukti**: `EVD-2026-KEL4-USB01`
-- **Volume Label**: `IV` (Menandakan Kepemilikan Kelompok 4)
-- **Tipe Media**: Removable USB Flash Drive (`D:\`)
-- **Sistem Berkas**: FAT32 (File Allocation Table 32-bit)
-- **Kapasitas Total**: 7.44 GiB (7,987,511,296 Bytes)
-- **Kapasitas Terpakai**: 5.17 GiB (5,551,730,688 Bytes)
-- **Klaster Size**: 4,096 Bytes (8 Sektor per Klaster)
-- **Sektor Fisik**: 512 Bytes
+> 📑 **Akses Laporan Resmi DFIR Lengkap**:  
+> 👉 [**Laporan Investigasi Forensik Kelompok 4 (DFIR-2026-FD-KEL4)**](./kelompok%204/LAPORAN_INVESTIGASI_FORENSIK_KELOMPOK_4.md)  
+> 👉 [**Laporan Investigasi Forensik Kelompok 5 (DFIR-2026-FD-KEL5)**](./kelompok%205/LAPORAN_INVESTIGASI_FORENSIK_KELOMPOK_5.md)
 
 ---
 
-## 🛠️ Alur Metodologi Forensik (10 Tahapan)
+## 📑 Perbandingan Karakteristik Media Barang Bukti
+
+| Parameter Teknis | Barang Bukti Kelompok 4 | Barang Bukti Kelompok 5 |
+| :--- | :--- | :--- |
+| **Nomor Kasus DFIR** | `DFIR-2026-FD-KEL4-001` | `DFIR-2026-FD-KEL5-001` |
+| **Volume Label** | `IV` | `USB DISK` |
+| **Tipe Perangkat** | Removable USB Storage Media | Removable USB Storage Media |
+| **Sistem Berkas** | FAT32 (`MSDOS5.0`) | FAT32 (`MSDOS5.0`) |
+| **Ukuran Sektor Fisik** | 512 Bytes | 512 Bytes |
+| **Ukuran Klaster** | 4.096 Bytes (8 Sektor/Klaster) | 16.384 Bytes (32 Sektor/Klaster) |
+| **Kapasitas Media** | 7.44 GiB (7.987.511.296 B) | 28.64 GiB (30.747.394.048 B) |
+| **Jumlah Flag Ditemukan** | 2 Flag (`FLAG{...}`) | 1 Flag Khusus (`CODENAME{...}`) |
+| **Artefak Sekunder** | `250926.png` (Stego carrier) | `zein_carved.png`, `link.txt` (Decoy profil dosen) |
+
+---
+
+## 🛠️ Alur Metodologi Forensik Digital (ISO/IEC 27037)
 
 ```
-[TAHAP 1: IDENTIFIKASI DRIVE D:] ---> [TAHAP 2: DUPLIKASI ROBOCOPY] ---> [TAHAP 3: HASHING VERIFIKASI]
-                                                                                |
-[TAHAP 6: CARVING KLASTER 729073] <-- [TAHAP 5: SCAN ENTRI 0xE5 FAT32] <-- [TAHAP 4: TIMELINE ANALYSIS]
-        |
-[TAHAP 7: VERIFIKASI FLAG 1] -------> [TAHAP 8: DETEKSI STEGO CARRIER] -> [TAHAP 9: ANALISIS OPENSTEGO]
-                                                                                |
-                                                                        [TAHAP 10: DEKRIPSI & FLAG 2]
+[1. IDENTIFIKASI MEDIA] ────> [2. AKUISISI ROBOCOPY] ────> [3. VERIFIKASI HASH SHA-256]
+                                                                    │
+┌───────────────────────────────────────────────────────────────────┘
+▼
+[4. ANALISIS TIMELINE]  ────> [5. PARSING ENTRI 0xE5] ───> [6. CLUSTER & FILE CARVING]
+                                                                    │
+┌───────────────────────────────────────────────────────────────────┘
+▼
+[7. ANALISIS PAYLOAD]   ────> [8. STEGANO / OVERLAY]  ───> [9. EKSTRAKSI & VALIDASI FLAG]
 ```
 
-### Rincian 10 Tahap:
-1. **Tahap 1 - Identifikasi Fisik & Logis**: Membaca properti volume `IV` pada drive `D:\`.
-2. **Tahap 2 - Preservasi Bukti (Akuisisi Logis)**: Menyalin 50.708 file menggunakan Robocopy dengan proteksi atribut dan stempel waktu.
-3. **Tahap 3 - Verifikasi Rantai Bukti (Hashing)**: Menghitung MD5 & SHA-256 berkas tugas asli vs salinan (identik 100%).
-4. **Tahap 4 - Timeline Analysis (MACB)**: Mengisolasi transaksi yang terjadi pada tanggal 28 September 2026 (08:59 - 09:22 WIB).
-5. **Tahap 5 - Deteksi Entri Terhapus FAT32**: Menemukan entri terhapus bertanda `0xE5` (`cobainAES128.txt`) pada Klaster direktori 7.
-6. **Tahap 6 - Rekonstruksi Klaster & Carving**: Rekonstruksi nomor klaster `0x0b1ff1` (Klaster 729073) dan pembacaan sektor mentah.
-7. **Tahap 7 - Pemulihan Bukti Flag 1**: Ekstraksi dan verifikasi hash berkas `cobainAES128.txt` (`FLAG{F1L3nY4DiH4pu5}`).
-8. **Tahap 8 - Deteksi Anomali Steganografi**: Menemukan 1 berkas PNG ganjil `250926.png` di antara 1.500+ thumbnail JPG osu!.
-9. **Tahap 9 - Dekonstruksi Header OpenStego**: Analisis LSB bitstream mengungkap signature `OPENSTEGO`, PRNG seed `98234782L`, dan format blank password.
-10. **Tahap 10 - Ekstraksi Steganografi Flag 2**: Mendekripsi AES-128 PBE dan dekompresi GZIP untuk memulihkan `FLAG{k4t4H1kar1_0K3}`.
+### Rangkuman Kasus Kelompok 4:
+1. Rekonstruksi tabel direktori `/tugas` mendeteksi berkas terhapus `cobainAES128.txt` pada Klaster `729073`.
+2. Carving sektor mentah memulihkan Flag 1: `FLAG{F1L3nY4DiH4pu5}`.
+3. Analisis direktori aset `rhythm game` menemukan gambar ganjil `250926.png`. Bitstream parsing mendeteksi signature OpenStego RandomLSB tanpa password (`blank password`).
+4. Dekripsi AES-128 PBE dan dekompresi GZIP memulihkan Flag 2: `FLAG{k4t4H1kar1_0K3}`.
+
+### Rangkuman Kasus Kelompok 5:
+1. Pemeriksaan volume menemukan folder aktif `FLAG-1` berisi berkas gambar `opung_archive.jpg`.
+2. Analisis heksadesimal mendeteksi 32 byte data tambahan (*trailing data*) tepat setelah penanda akhir berkas JPEG (*End-of-Image* / EOI marker `FF D9` pada offset `95.745`).
+3. Ekstraksi langsung memulihkan flag berformat khusus: `CODENAME{4P0ST3L_P3T3R_0F_GL0RY}`.
+4. Parsing tabel direktori root FAT32 mendeteksi dokumen terhapus `hidden_mission.txt` (sumber flag), foto mahasiswa terhapus `zein-removebg-preview.png` (klaster 6..11), dan `link.txt` yang merujuk pada Google Images profil dosen ITS Dr. Hatma Suryotrisongko.
 
 ---
 
-## 📸 Galeri Screenshot Bukti Autentik
+## 🔒 Matriks Hash Integritas Kriptografis (Chain of Custody)
 
-Seluruh tangkapan layar di bawah ini merupakan hasil eksekusi terminal PowerShell asli dari stasiun kerja penyelidik:
-
-| Tahap | Keterangan Tindakan Forensik | Pratinjau Tangkapan Layar |
-| :---: | :--- | :---: |
-| **01** | Identifikasi Volume Flashdisk `IV` (`D:\`) | [Lihat Exhibit 1](./kelompok%204/screenshots/ss1_identifikasi_drive.png) |
-| **02** | Akuisisi Logis Robocopy (50.708 Berkas) | [Lihat Exhibit 2](./kelompok%204/screenshots/ss2_duplikasi_barang_bukti.png) |
-| **03** | Verifikasi Integritas Checksum MD5 & SHA-256 | [Lihat Exhibit 3](./kelompok%204/screenshots/ss3_hashing_integritas.png) |
-| **04** | Analisis Timeline Transaksi 28 September 2026 | [Lihat Exhibit 4](./kelompok%204/screenshots/ss4_analisis_timeline.png) |
-| **05** | Deteksi Entri Terhapus FAT32 (Byte `0xE5`) | [Lihat Exhibit 5](./kelompok%204/screenshots/ss5_deteksi_entri_terhapus_fat32.png) |
-| **06** | Rekonstruksi Klaster 729073 & Sector Carving | [Lihat Exhibit 6](./kelompok%204/screenshots/ss6_rekonstruksi_klaster_dan_carving.png) |
-| **07** | Pemulihan Flag 1 (`cobainAES128.txt`) | [Lihat Exhibit 7](./kelompok%204/screenshots/ss7_pemulihan_dan_verifikasi.png) |
-| **08** | Deteksi Anomali Stego Carrier `250926.png` | [Lihat Exhibit 8](./kelompok%204/screenshots/ss8_deteksi_anomali_steganografi.png) |
-| **09** | Analisis Struktur Bitstream OpenStego v2 | [Lihat Exhibit 9](./kelompok%204/screenshots/ss9_analisis_header_openstego.png) |
-| **10** | Ekstraksi & Dekripsi Steganografi Flag 2 | [Lihat Exhibit 10](./kelompok%204/screenshots/ss10_ekstraksi_flag2_steganografi.png) |
+| ID Bukti | Nama Artefak | Ukuran | Checksum MD5 | Checksum SHA-256 |
+| :---: | :--- | :---: | :--- | :--- |
+| **K4-F1** | `kelompok 4/recovered_files/cobainAES128.txt` | 20 B | `8642a00cc9feeb559d5de23e19d2b150` | `6102bef305cdc7363c8acdfb1f9b57005cf642cb6fe1fdc3009500cc44228094` |
+| **K4-F2** | `kelompok 4/recovered_files/stego_flag2.txt` | 20 B | `5bc41b9264b94ba9d321c9a3eab88be2` | `df5f6ee3d0161a1f58a51a0373652cfce57451305c5a897bb903de756963bb6a` |
+| **K5-F1** | `kelompok 5/recovered_files/flag.txt` | 34 B | `3597ab716096a98ccb26425463796392` | `943046ab8c6f6c74a3b4e318adab159280c42dd2249bf15ab4cf245d966d5268` |
+| **K5-HM** | `kelompok 5/recovered_files/hidden_mission.txt` | 32 B | `c4bcfb80c928064ef36f7aef6a1669af` | `87beaedfbb2f34a9d96b5fcc2e429b961eed6031908d54ebbba94da2a3c0df9c` |
+| **K5-LK** | `kelompok 5/recovered_files/link.txt` | 38 B | `497ed49b9b20e8544338dacdddc7461d` | `ecd22a22fb3b3b07d91a472ffa36db62782e2003d994a160854128d52425688d` |
+| **K5-IMG**| `kelompok 5/recovered_files/zein_carved.png` | 94.651 B | `52b91f060ed4b06f683c3d1bf567f96c` | `12ce476ae8b6b065104692da6a7dbe69512f6cb848989bfff5ec86a3749e0254` |
 
 ---
 
-## 🔒 Tabel Hash Integritas Kriptografis
-
-| ID Artefak | Nama Berkas | Kategori Bukti | Ukuran | MD5 Hash | SHA-256 Hash |
-| :---: | :--- | :--- | :---: | :--- | :--- |
-| **FLAG-01** | `cobainAES128.txt` | **Flag 1 (FAT32 Deleted)** | **20 B** | `8642a00cc9feeb559d5de23e19d2b150` | `6102bef305cdc7363c8acdfb1f9b57005cf642cb6fe1fdc3009500cc44228094` |
-| **FLAG-02** | `stego_flag2.txt` | **Flag 2 (Steganography)** | **20 B** | `5bc41b9264b94ba9d321c9a3eab88be2` | `df5f6ee3d0161a1f58a51a0373652cfce57451305c5a897bb903de756963bb6a` |
-| **CARR-01** | `250926.png` | Carrier Image Steganografi | 47,722 B | `0fe28807d47bfcefe5f0612bb0958ce7` | `f3e8f85f3ba2132d7296064f28682e8c2552e6fc7004f21cf371261cb28a8d05` |
-
----
-
-## 📂 Struktur Folder Repositori
+## 📂 Struktur Repositori Forensik
 
 ```
 forensik-digital/
-├── README.md                                    # Executive Repository Showcase (File ini)
-├── .gitignore                                   # Konfigurasi proteksi privasi barang bukti mentah
-└── kelompok 4/
-    ├── LAPORAN_INVESTIGASI_FORENSIK_KELOMPOK_4.md # Dokumen DFIR Lengkap Standar ISO/IEC 27037
-    ├── screenshots/                             # 10 Tangkapan Layar Autentik (SS1 - SS10)
-    │   ├── ss1_identifikasi_drive.png
-    │   ├── ss2_duplikasi_barang_bukti.png
-    │   ├── ss3_hashing_integritas.png
-    │   ├── ss4_analisis_timeline.png
-    │   ├── ss5_deteksi_entri_terhapus_fat32.png
-    │   ├── ss6_rekonstruksi_klaster_dan_carving.png
-    │   ├── ss7_pemulihan_dan_verifikasi.png
-    │   ├── ss8_deteksi_anomali_steganografi.png
-    │   ├── ss9_analisis_header_openstego.png
-    │   └── ss10_ekstraksi_flag2_steganografi.png
-    ├── recovered_files/                         # Berkas Bukti Hasil Recovery & Ekstraksi
-    │   ├── cobainAES128.txt                     # Berkas Flag 1 (File-nya Dihapus)
-    │   └── stego_flag2.txt                      # Berkas Flag 2 (Kata Hikari OKE)
-    └── scripts/                                 # Perangkat Skrip Forensik Mandiri
-        ├── extract_evidence.py                  # Skrip carving Klaster FAT32 (Flag 1)
-        ├── extract_stego_flag.py                # Skrip ekstraksi OpenStego LSB (Flag 2)
-        ├── scan_fat.py                          # Skrip pembaca entri tabel FAT32
-        ├── scan_all_deleted.py                  # Skrip pemindai entri terhapus rekursif
-        └── verify_hashes.py                     # Skrip verifikasi checksum MD5 & SHA-256
+├── README.md                                      # Executive Showcase Utama (File ini)
+├── .gitignore                                     # Konfigurasi isolasi bukti fisik mentah
+│
+├── kelompok 4/                                    # Kasus 1 & 2 (Kelompok 4)
+│   ├── LAPORAN_INVESTIGASI_FORENSIK_KELOMPOK_4.md   # Laporan Lengkap DFIR ISO/IEC 27037
+│   ├── screenshots/                               # 10 Tangkapan Layar Autentik (SS1 - SS10)
+│   ├── recovered_files/                           # Berkas Hasil Pemulihan Flag 1 & Flag 2
+│   └── scripts/                                   # Skrip Carving & Ekstraksi Steganografi
+│
+└── kelompok 5/                                    # Kasus 3 (Kelompok 5)
+    ├── LAPORAN_INVESTIGASI_FORENSIK_KELOMPOK_5.md   # Laporan Lengkap DFIR ISO/IEC 27037
+    ├── screenshots/                               # 8 Tangkapan Layar Autentik (SS1 - SS8)
+    ├── recovered_files/                           # Berkas Hasil Carving & Ekstraksi Trailing
+    └── scripts/                                   # Skrip Parser FAT32, Carving, & Hashing
 ```
 
 ---
 
-## 💻 Panduan Reproduksi Independen
+## 💻 Panduan Reproduksi Independen (Verification Commands)
 
-Untuk menguji ulang dan mereproduksi hasil ekstraksi bukti secara independen:
-
-### 1. Ekstraksi Flag 1 (FAT32 Carving)
+### Verifikasi Kelompok 4
 ```powershell
+# Ekstraksi Flag 1 (FAT32 Carving)
 python "kelompok 4\scripts\extract_evidence.py"
 Get-Content "kelompok 4\recovered_files\cobainAES128.txt"
-```
 
-### 2. Ekstraksi Flag 2 (Steganografi LSB)
-```powershell
+# Ekstraksi Flag 2 (OpenStego LSB Decryption)
 python "kelompok 4\scripts\extract_stego_flag.py"
 Get-Content "kelompok 4\recovered_files\stego_flag2.txt"
+```
+
+### Verifikasi Kelompok 5
+```powershell
+# Parsing Struktur FAT32 & Entri Terhapus
+python "kelompok 5\scripts\scan_fat32.py"
+
+# Ekstraksi Flag Trailing JPEG & Carving Klaster Unallocated
+python "kelompok 5\scripts\extract_evidence.py"
+Get-Content "kelompok 5\recovered_files\flag.txt"
+
+# Verifikasi Nilai Hash Integritas
+python "kelompok 5\scripts\verify_hashes.py"
 ```
 
 ---
