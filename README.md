@@ -27,9 +27,9 @@ Seluruh investigasi diselesaikan secara independen oleh **Kelompok 3** dengan me
 
 | Subjek Kasus | Target Bukti | Teknik Anti-Forensik | Format Penanda | Nilai Key / Flag | Makna Semantik |
 | :---: | :---: | :---: | :---: | :---: | :--- |
-| **Kelompok 4** | Kasus 1 | FAT32 Directory Deletion (`0xE5`) | Standar `FLAG{}` | `FLAG{F1L3nY4DiH4pu5}` | *"File-nya Dihapus"* |
-| **Kelompok 4** | Kasus 2 | OpenStego LSB Steganography | Standar `FLAG{}` | `FLAG{k4t4H1kar1_0K3}` | *"Kata Hikari OKE"* |
-| **Kelompok 5** | Kasus 3 | JPEG EOI Trailing Data Overlay | **Khusus** `CODENAME{}` | `CODENAME{4P0ST3L_P3T3R_0F_GL0RY}` | *"Apostle Peter of Glory"* (Manhwa Killer Peter) |
+| **Kelompok 4** | Kasus 1 | FAT32 Directory Deletion (`0xE5`) | `FLAG{...}` | `FLAG{F1L3nY4DiH4pu5}` | *"File-nya Dihapus"* |
+| **Kelompok 4** | Kasus 2 | OpenStego LSB Steganography | `FLAG{...}` | `FLAG{k4t4H1kar1_0K3}` | *"Kata Hikari OKE"* |
+| **Kelompok 5** | Kasus 3 | JPEG EOI Trailing Data Overlay | `CODENAME{...}` | `CODENAME{4P0ST3L_P3T3R_0F_GL0RY}` | *"Apostle Peter of Glory"* (Manhwa Killer Peter) |
 
 > 📑 **Akses Laporan Resmi DFIR Lengkap**:  
 > 👉 [**Laporan Investigasi Forensik Kelompok 4 (DFIR-2026-FD-KEL4)**](./kelompok%204/LAPORAN_INVESTIGASI_FORENSIK_KELOMPOK_4.md)  
@@ -48,7 +48,7 @@ Seluruh investigasi diselesaikan secara independen oleh **Kelompok 3** dengan me
 | **Ukuran Sektor Fisik** | 512 Bytes | 512 Bytes |
 | **Ukuran Klaster** | 4.096 Bytes (8 Sektor/Klaster) | 16.384 Bytes (32 Sektor/Klaster) |
 | **Kapasitas Media** | 7.44 GiB (7.987.511.296 B) | 28.64 GiB (30.747.394.048 B) |
-| **Jumlah Flag Ditemukan** | 2 Flag (`FLAG{...}`) | 1 Flag Khusus (`CODENAME{...}`) |
+| **Jumlah Flag Ditemukan** | 2 Flag (`FLAG{...}`) | 1 Flag (`CODENAME{...}`) |
 | **Artefak Sekunder** | `250926.png` (Stego carrier) | `zein_carved.png`, `link.txt` (Decoy profil dosen) |
 
 ---

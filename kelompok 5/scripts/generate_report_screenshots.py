@@ -274,7 +274,7 @@ lines8 = [
     ("", "white"),
     ("PS C:\\Users\\arya4\\forensik-digital> # INVESTIGASI SELESAI: FLAG RESMI KELOMPOK 5 TERBUKTI 100% VALID", "gray"),
     ("[+] KEYWORD / FLAG UTAMA : CODENAME{4P0ST3L_P3T3R_0F_GL0RY}", "green"),
-    ("[+] FORMAT FORMAT KHUSUS : BUKAN 'FLAG{}' MELAINKAN 'CODENAME{}'", "white_bold"),
+    ("[+] FORMAT IDENTIFIER    : CODENAME{...}", "white_bold"),
     ("[+] SEMANTIK PAYLOAD    : APOSTLE PETER OF GLORY (Karakter Manhwa 'Killer Peter')", "white"),
     ("[+] ARTEFAK PENDUKUNG   : zein_carved.png (Foto Mahasiswa) & link.txt (Dosen Pembina ITS)", "white"),
     ("PS C:\\Users\\arya4\\forensik-digital> # [ISO/IEC 27037 & NIST SP 800-86] STATUS KASUS: CLOSED / SOLVED", "gray")

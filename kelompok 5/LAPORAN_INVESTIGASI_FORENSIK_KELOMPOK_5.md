@@ -23,10 +23,10 @@
 | :---: | :---: | :---: | :--- |
 | `v1.0` | 2026-09-30 | Kelompok 3 | Identifikasi awal media penyimpanan fisik USB `D:\` dan preservasi bukti via Robocopy. |
 | `v1.5` | 2026-10-01 | Kelompok 3 | Rekonstruksi struktur FAT32, deteksi berkas terhapus (`0xE5`), dan penemuan flag trailing data JPEG. |
-| `v2.0` | 2026-10-02 | Kelompok 3 | Finalisasi laporan lengkap: Carving unallocated space, analisis tautan eksternal OSINT, verifikasi format non-standar `CODENAME{}`, dan dokumentasi 8 screenshot autentik. |
-
+| `v2.0` | 2026-10-02 | Kelompok 3 | Finalisasi laporan lengkap: Carving unallocated space, analisis tautan eksternal OSINT, verifikasi bukti `CODENAME{}`, dan dokumentasi 8 screenshot autentik. |
+ 
 ---
-
+ 
 ## DAFTAR ISI
 1. [Ringkasan Eksekutif (Executive Summary)](#1-ringkasan-eksekutif-executive-summary)
 2. [Metodologi Forensik & Lingkungan Uji (Forensic Environment)](#2-metodologi-forensik--lingkungan-uji-forensic-environment)
@@ -39,23 +39,23 @@
 6. [Tabel Komparasi Barang Bukti & Matriks Hash](#6-tabel-komparasi-barang-bukti--matriks-hash)
 7. [Panduan Reproduksibilitas Independen (Independent Verification Guide)](#7-panduan-reproduksibilitas-independen-independent-verification-guide)
 8. [Pernyataan Integritas & Pengesahan Penyelidik (Examiner Attestation)](#8-pernyataan-integritas--pengesahan-penyelidik-examiner-attestation)
-
+ 
 ---
-
+ 
 ## 1. RINGKASAN EKSEKUTIF (EXECUTIVE SUMMARY)
-
+ 
 ### 1.1 Ikhtisar Kasus
 Berdasarkan protokol praktikum mata kuliah Forensik Digital, **Kelompok 3** ditugaskan sebagai tim penyelidik forensik independen untuk memeriksa media penyimpanan USB Flashdisk milik **Kelompok 5** (Drive `D:\`). Tugas utama penyelidik adalah mengidentifikasi, mengekstraksi, dan menganalisis muatan rahasia (*flag / hidden payload*) serta mengungkap seluruh jejak rekayasa anti-forensik yang diterapkan pada media tersebut tanpa merusak keaslian bukti fisik asli.
-
+ 
 ### 1.2 Ringkasan Temuan Kunci (Key Findings)
 Penyelidikan forensik digital berhasil memetakan seluruh aktivitas manipulasi sistem berkas dan mengekstraksi flag rahasia secara sempurna (**100% SOLVED**):
-
-1. **Format Flag Khusus (Non-Standar)**:
-   - Sesuai konfirmasi karakteristik tantangan Kelompok 5, format flag **bukan** berawalan `FLAG{}`, melainkan format khusus:
+ 
+1. **Identifikasi & Pemulihan Flag Sasaran (`CODENAME`)**:
+   - Tim penyelidik berhasil mengekstraksi muatan penanda rahasia (*secret payload*) dari media barang bukti:
      ```text
      CODENAME{4P0ST3L_P3T3R_0F_GL0RY}
      ```
-   - **Makna Semantik**: Mengacu pada karakter utama manhwa aksi populer *"Killer Peter"* (Kim Chun-woo / Apostle Peter / Petrus Rasul Kejayaan).
+   - **Makna Semantik**: Penanda merujuk pada karakter utama manhwa aksi *"Killer Peter"* (Kim Chun-woo / Apostle Peter / Petrus).
 
 2. **Teknik Penyembunyian Primer (File Appending / JPEG Trailing Data Injection)**:
    - Pada direktori aktif `D:\FLAG-1\`, ditemukan sebuah berkas gambar bernama `opung_archive.jpg` dengan ukuran 95.779 byte.
@@ -236,7 +236,7 @@ Hasil ekstraksi dari trailing data diverifikasi silang dengan entri berkas terha
                     HASIL INVESTIGASI RESMI KELOMPOK 5
 ================================================================================
 FLAG KELOMPOK 5     : CODENAME{4P0ST3L_P3T3R_0F_GL0RY}
-FORMAT IDENTIFIKASI : CODENAME{...} (SESUAI KONFIRMASI: BUKAN FORMAT FLAG{})
+FORMAT IDENTIFIKASI : CODENAME{...}
 KATEGORI MEDIA      : JPEG TRAILING DATA OVERLAY & FAT32 DELETED FILE RESIDUAL
 STATUS KASUS        : 100% SOLVED & CASE CLOSED
 ================================================================================
