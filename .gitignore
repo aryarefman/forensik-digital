@@ -6,6 +6,9 @@ kelompok 4/System Volume Information/
 kelompok 5/raw_evidence/
 kelompok 5/evidence/
 kelompok 5/System Volume Information/
+kelompok 1/raw_evidence/
+kelompok 1/evidence/
+kelompok 1/System Volume Information/
 
 # Python cache & Java binaries
 __pycache__/
@@ -22,3 +25,4 @@ kelompok 4/scripts/FastCracker*
 kelompok 4/scripts/DecryptTester*
 kelompok 4/scripts/inspect_gui.py
 kelompok 4/scripts/test_openstego.py
+*generate_report_screenshots*
