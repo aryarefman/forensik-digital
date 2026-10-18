@@ -9,6 +9,11 @@ kelompok 5/System Volume Information/
 kelompok 1/raw_evidence/
 kelompok 1/evidence/
 kelompok 1/System Volume Information/
+kelompok 3/evidence_image/*.raw
+kelompok 3/evidence_image/*.vhd
+kelompok 3/KUNCI_JAWABAN_MASTER_KELOMPOK_3.md
+kelompok 3/scripts/
+kelompok 3/LINK_SUBMISSION_GOOGLE_SHEET.md
 
 # Python cache & Java binaries
 __pycache__/

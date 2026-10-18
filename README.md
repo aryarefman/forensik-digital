@@ -35,11 +35,13 @@ Seluruh investigasi diselesaikan secara independen oleh **Kelompok 3** dengan me
 | **Kelompok 4** | Kasus 4 | OpenStego LSB Steganography | `FLAG{...}` | `FLAG{k4t4H1kar1_0K3}` | *"Kata Hikari OKE"* |
 | **Kelompok 5** | Kasus 5 | JPEG EOI Trailing Data Overlay | `CODENAME{...}` | `CODENAME{4P0ST3L_P3T3R_0F_GL0RY}` | *"Apostle Peter of Glory"* (Manhwa Killer Peter) |
 
-> 📑 **Akses Laporan Resmi DFIR Lengkap**:  
+> 📑 **Akses Laporan Resmi DFIR & Berkas Tugas**:  
 > 👉 [**Laporan Investigasi Forensik Kelompok 1 (DFIR-2026-FD-KEL1)**](./kelompok%201/LAPORAN_INVESTIGASI_FORENSIK_KELOMPOK_1.md)  
 > 👉 [**Laporan Investigasi Forensik Kelompok 2 (DFIR-2026-FD-KEL2)**](./kelompok%202/LAPORAN_INVESTIGASI_FORENSIK_KELOMPOK_2.md)  
+> 👉 [**Kasus & Citra Forensik Windows OS Kelompok 3 (Tugas A & B)**](./kelompok%203/SOAL_DAN_PANDUAN_TUGAS_KELOMPOK_4.md)  
 > 👉 [**Laporan Investigasi Forensik Kelompok 4 (DFIR-2026-FD-KEL4)**](./kelompok%204/LAPORAN_INVESTIGASI_FORENSIK_KELOMPOK_4.md)  
-> 👉 [**Laporan Investigasi Forensik Kelompok 5 (DFIR-2026-FD-KEL5)**](./kelompok%205/LAPORAN_INVESTIGASI_FORENSIK_KELOMPOK_5.md)
+> 👉 [**Laporan Investigasi Forensik Kelompok 5 (DFIR-2026-FD-KEL5)**](./kelompok%205/LAPORAN_INVESTIGASI_FORENSIK_KELOMPOK_5.md)  
+> 👉 [**Format Submission Google Sheet Kelompok 3**](./kelompok%203/LINK_SUBMISSION_GOOGLE_SHEET.md)
 
 ---
 

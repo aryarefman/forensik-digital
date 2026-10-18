@@ -1,0 +1,22 @@
+﻿================================================================================
+HASH MANIFEST & CHAIN OF CUSTODY â€” EVIDENCE KELOMPOK 3
+Kasus: Forensik Digital (Tugas A - Image OS Windows)
+Tanggal Pembuatan: 2026-10-18 20:45:01 WIB
+================================================================================
+
+[BERKAS 1: RAW BITSTREAM IMAGE]
+Nama Berkas : evidence_windows_kelompok3.raw
+Ukuran      : 268435456 Bytes (256 MiB)
+Format      : Raw DD / Bitstream Image (MBR + FAT32 LBA)
+MD5         : 615e27fa50a4ee9c3e572adf52aa9c6f
+SHA-1       : 76ff89233d5399728738e7193505ad326d10d73b
+SHA-256     : f7d5a14124dab46db67ed35e25572442ceacf328bbca852ccbcb613b9eaa5086
+
+[BERKAS 2: MICROSOFT FIXED VHD]
+Nama Berkas : evidence_windows_kelompok3.vhd
+Ukuran      : 268435968 Bytes (256 MiB)
+Format      : Microsoft Virtual Hard Disk (Fixed VHD)
+MD5         : caa440b906c5faff6a37eb53d5ec77c7
+SHA-1       : 0e2251812f3a245129b7baec3b8780b5602a0169
+SHA-256     : c05779484da6a583bc53c92b64a5e13987842b0541b80bb996caacf848c99153
+================================================================================
