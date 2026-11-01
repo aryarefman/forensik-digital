@@ -5,6 +5,18 @@ konsolnya, lalu menampilkan traffic lab di Wireshark secara langsung. APK dalam
 [undangan-g03.zip](undangan-g03.zip) adalah sampel asli untuk analisis; jalankan
 sampel di emulator lab.
 
+Lab ini memiliki dua objective:
+
+1. **Reverse engineering dan perolehan flag:** memahami alur APK, mereproduksi
+   request `POST` ke server C2 lab, lalu membuktikan asal flag dari responsnya.
+2. **Hardened system:** membangun dan mengevaluasi lingkungan analisis yang
+   membatasi akses sampel dan proses analisis ke host, mengendalikan jalur
+   jaringan, serta menyimpan bukti yang dapat diperiksa ulang.
+
+Keberhasilan memperoleh flag membuktikan alur komunikasi sampel berhasil
+direproduksi. Penilaian hardening dilakukan terpisah melalui pemeriksaan kontrol
+isolasi dan bukti pengujiannya; flag saja belum membuktikan keamanan lab.
+
 Semua perintah dijalankan dari **root repository**, yaitu direktori yang berisi
 folder `apkfuse/`. Jangan menjalankan `python -m apkfuse.lab` dari dalam folder
 `apkfuse/`.
@@ -40,6 +52,30 @@ DNS ke host. Capture ini memperlihatkan traffic yang mencapai jalur proxy/DNS
 tersebut, bukan seluruh paket pada virtual NIC Android; traffic UDP lain atau
 traffic yang mengabaikan proxy tidak otomatis tercakup. Port ADB `5555`
 dikecualikan dari capture oleh script lab.
+
+### Kontrol hardening dan batas penerapannya
+
+| Area | Kontrol pada implementasi saat ini | Yang perlu dibuktikan saat pengujian |
+| --- | --- | --- |
+| Integritas sampel | SHA-256 dan mount APK `ro,nosuid,nodev,noexec` pada [fs.py](fs.py). | Hash APK tetap sama; opsi mount aktif dan operasi tulis ditolak. |
+| Perubahan emulator | Golden image menjadi lower layer `fuse-overlayfs`; perubahan ditulis ke `upper/`. | Perubahan run tersimpan pada kasus yang sesuai; run bersih memakai lingkungan tanpa kasus lama. |
+| Isolasi proses dan filesystem | Namespace serta bind mount dipilih oleh `_ns_argv()` dan `_bwrap_argv()` pada [lab.py](lab.py). | Proses dan path host yang tidak dipetakan tidak dapat diakses dari sandbox emulator. |
+| Jalur jaringan | Namespace terpisah, bridge proxy/DNS, dan opsi `--offline`. | Mode offline tidak memiliki bridge keluar; mode normal memakai jalur proxy yang dicatat. |
+| Observabilitas | PCAP, flow mitmproxy, logcat, dan metadata run. | Request dan respons dapat dikorelasikan dengan waktu run dan sampel yang benar. |
+
+Tabel tersebut menjelaskan konfigurasi dan target verifikasi, bukan hasil audit
+keamanan yang sudah lulus. Mode normal saat ini **belum menerapkan allowlist
+tujuan C2** pada proxy, sehingga koneksi yang melewati proxy masih dapat menuju
+tujuan lain yang dijangkau host. Script juga memetakan `/etc` dan `/sys` host
+secara read-only, memberi akses `/dev/kvm`, serta meneruskan socket X11 ketika
+mode GUI dipakai. Akses tersebut perlu dinilai dalam threat model lab.
+
+Untuk penguatan lanjutan, evaluasi pembatasan egress ke server lab yang
+diizinkan, minimalkan path dan perangkat host yang dipetakan, serta tentukan
+kebijakan syscall dan batas resource. Kontrol lanjutan ini belum dikonfigurasi
+oleh panduan ini. Penentuan kebijakan tetap menjadi tanggung jawab pembangun
+sandbox, sebagaimana dijelaskan dalam
+[dokumentasi keamanan bubblewrap](https://github.com/containers/bubblewrap#sandbox-security).
 
 ## 2. Siapkan host Linux
 
@@ -174,6 +210,34 @@ LAB_OUT="$PWD/cases/$LAB_CASE/out"
 
 Untuk sampel ini, `LAB_CASE` bernilai `0ece697fcdbb`.
 
+### Telusuri alur reverse engineering sebelum menjalankan sampel
+
+Pada [APK asli](undangan-g03.zip), alur `MainActivity.onCreate()` memanggil
+`sync()` pada `classes3.dex`. Tinjau kelas tersebut dan `BuildConfig` dengan
+decompiler DEX untuk mencatat endpoint, metode, body request, dan pengolahan
+respons. Alur yang menjadi dasar langkah dinamis berikut adalah:
+
+1. Aplikasi membuka endpoint C2 dari `BuildConfig.C2` dan menetapkan metode
+   `POST` dengan `Content-Type: application/json`.
+2. Body JSON memuat `chat_id`, `text`, dan `model`. Pada sampel asli, `chat_id`
+   bernilai `g03`, `text` bernilai `g03 online`, dan `model` diambil dari
+   `Build.MODEL`.
+3. Setelah menerima respons, aplikasi membaca field `result.text` dan menulisnya
+   ke logcat dengan awalan `payload=`. Pada skenario challenge ini, flag yang
+   dicari diperoleh dari respons C2 tersebut.
+
+Dengan demikian, membaca URL di APK merupakan bagian analisis statis. Untuk
+memperoleh flag melalui alur aplikasi, server C2 lab harus dapat dijangkau dan
+request **POST beserta body yang sesuai** harus diterima server. Membuka URL
+melalui browser dengan GET tidak mereproduksi request aplikasi.
+
+Mode `--offline` berguna untuk mengevaluasi perilaku tanpa koneksi keluar,
+tetapi tidak dapat mengambil flag dari respons C2. Gunakan mode normal untuk
+tahap komunikasi dengan server lab, sambil tetap mengevaluasi pembatasan
+egress. Alur perolehannya adalah **reverse engineering → request POST →
+respons C2 → validasi flag dan bukti**, disertai penilaian hardening pada setiap
+tahap yang relevan.
+
 ## 6. Inisialisasi lab satu kali
 
 ```bash
@@ -218,6 +282,10 @@ ls "cases/$LAB_CASE/static/raw"
 findmnt -T "cases/$LAB_CASE/static"
 findmnt -T "cases/$LAB_CASE/env"
 ```
+
+Untuk objective hardening, simpan hasil pemeriksaan mount dan cocokkan dengan
+kontrol pada langkah 1. Kehadiran direktori `static/` atau `env/` saja belum
+membuktikan bahwa mount dan opsi isolasinya aktif.
 
 ## 8. Hubungkan Wireshark dari Terminal B
 
@@ -269,6 +337,7 @@ Filter tampilan yang dapat digunakan:
 | --- | --- |
 | `dns` | Query dan respons DNS. |
 | `http.request || http.response` | Request dan respons HTTP yang dapat didiseksi. |
+| `http.request.method == "POST"` | Request POST yang perlu dicocokkan dengan endpoint dan body hasil reverse engineering. |
 | `http.request.method == "CONNECT"` | Pembentukan tunnel proxy HTTP. |
 | `tcp.port == 8080` | Koneksi ke proxy pada namespace lab. |
 | `tls` | Paket TLS yang dikenali Wireshark. |
@@ -314,6 +383,33 @@ Jika ingin langsung meluncurkan aplikasi pada run berikutnya, tambahkan
 ```bash
 .venv/bin/python -m apkfuse.lab adb "$LAB_CASE" logcat -v threadtime
 ```
+
+### Validasi POST ke C2 dan asal flag
+
+Peluncuran activity memicu alur `sync()` yang ditelusuri pada langkah 5. Di
+Wireshark, gunakan filter `http.request.method == "POST"`, lalu cocokkan host,
+path, dan body JSON dengan hasil reverse engineering. Pilih **Follow → TCP
+Stream** untuk membaca request beserta respons pada koneksi yang sama.
+
+Ringkasan request dan respons juga dapat dibaca dari PCAP; hasil lengkap
+sebaiknya diperiksa setelah lab berhenti:
+
+```bash
+tshark -r "$LAB_OUT/netns.pcap" \
+  -Y 'http.request.method == "POST" || http.response' \
+  -T fields -e frame.number -e tcp.stream \
+  -e http.request.method -e http.response.code
+grep -F 'payload=' "$LAB_OUT/logcat.txt"
+```
+
+Cocokkan nomor `tcp.stream` POST ke C2 dengan responsnya. Status `200` saja
+belum membuktikan flag ditemukan: periksa isi `result.text`, lalu bandingkan
+dengan `payload=` pada logcat. Request POST ke host lain dari aplikasi sistem
+juga tidak menjadi bukti komunikasi C2 sampel.
+
+Jika server tidak terjangkau, catat kegagalan koneksi dan hasil observasi
+isolasi sebagai temuan lab. Objective perolehan flag belum tercapai pada run
+tersebut, tetapi pengujian hardening tetap dapat didokumentasikan.
 
 ### Opsional: konsol kontrol emulator pada port 5554
 
@@ -387,6 +483,12 @@ baru. Menyimpan `out/` saja tidak membuat lingkungan emulator kembali bersih.
 Untuk eksperimen dari golden image yang bersih, gunakan salinan kerja
 repository dengan direktori `base/golden/` dan tanpa direktori kasus lama.
 
+Laporan akhir lab mencatat dua hasil secara terpisah: **perolehan flag** dengan
+bukti POST dan respons C2, serta **evaluasi hardening** dengan bukti integritas,
+mount, isolasi, dan jalur jaringan. Tandai setiap pemeriksaan hardening sebagai
+lulus, gagal, atau belum diuji berdasarkan pengamatan; konfigurasi pada kode
+saja tidak dihitung sebagai uji yang lulus.
+
 ## Jika ada kendala
 
 | Gejala | Pemeriksaan |
@@ -414,3 +516,8 @@ yang ditambahkan setelah pembacaan dimulai. Mode capture `-i` terhalang izin
 eksekusi helper `dumpcap` pada environment penulisan ini. Inisialisasi golden
 image, boot emulator, konsol interaktif, GUI Wireshark, dan capture dari run APK
 baru belum dijalankan ulang dalam sesi penulisan ini.
+
+Penjelasan POST dan pemrosesan `result.text` dicocokkan dengan hasil dekompilasi
+`MainActivity` dari APK asli serta rekaman PCAP lokal yang sudah ada. Rekaman
+tersebut memuat POST dan respons `200` pada stream yang sama; pemeriksaan ini
+tidak menghubungi ulang server C2 dan tidak menjadi bukti audit hardening.
