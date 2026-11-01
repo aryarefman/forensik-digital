@@ -1,40 +1,41 @@
-# APKFuse — Panduan Lab APK, Emulator, dan Wireshark
+# APKFuse — Environment Lab & Network Capture
 
-Panduan ini menjalankan `undangan-g03.apk` di emulator Android terisolasi, membuka
-konsolnya, lalu menampilkan traffic lab di Wireshark secara langsung. APK dalam
-[undangan-g03.zip](undangan-g03.zip) adalah sampel asli untuk analisis; jalankan
-sampel di emulator lab.
+Pada lab ini terdapat custom script Python untuk mount APK secara read-only dan
+menjalankan emulator dengan FUSE overlay. Dari environment ini, proses dynamic
+analysis dan capturing traffic dapat dilakukan tanpa install APK ke perangkat
+utama. Sampel asli ada pada [undangan-g03.zip](undangan-g03.zip).
 
-Lab ini memiliki dua objective:
+Objective lab ini mencakup dua hal:
 
-1. **Reverse engineering dan perolehan flag:** memahami alur APK, mereproduksi
-   request `POST` ke server C2 lab, lalu membuktikan asal flag dari responsnya.
-2. **Hardened system:** membangun dan mengevaluasi lingkungan analisis yang
-   membatasi akses sampel dan proses analisis ke host, mengendalikan jalur
-   jaringan, serta menyimpan bukti yang dapat diperiksa ulang.
+1. Reverse engineering APK untuk mengetahui flow komunikasi ke C2, kemudian
+   menjalankan APK dan membaca flag dari respons server.
+2. Hardening system pada environment analisis, dengan mengecek isolasi proses,
+   akses filesystem, dan jalur network yang digunakan selama APK berjalan.
 
-Keberhasilan memperoleh flag membuktikan alur komunikasi sampel berhasil
-direproduksi. Penilaian hardening dilakukan terpisah melalui pemeriksaan kontrol
-isolasi dan bukti pengujiannya; flag saja belum membuktikan keamanan lab.
+Jadi, hasil yang dicatat mencakup flag beserta bukti traffic, lalu hasil
+pengecekan isolasi lab. Flag yang didapat belum menunjukkan bahwa semua kontrol
+keamanan environment sudah berjalan sesuai kebutuhan.
 
-Semua perintah dijalankan dari **root repository**, yaitu direktori yang berisi
-folder `apkfuse/`. Jangan menjalankan `python -m apkfuse.lab` dari dalam folder
-`apkfuse/`.
+Semua command di bawah dijalankan dari **root repository**, yaitu folder yang
+berisi `apkfuse/`. Untuk command `python -m apkfuse.lab`, posisi terminal tetap
+di root tersebut.
 
-## 1. Kenali alur lab
+## 1. Alur environment & isolasi
 
-[lab.py](lab.py) mengatur dua mount FUSE untuk setiap sampel:
+Pada [lab.py](lab.py), setiap sampel memiliki folder kasus sendiri. ID kasus
+diambil dari 12 karakter awal SHA-256 APK.
 
-| Lokasi | Fungsi |
+| Path | Keterangan |
 | --- | --- |
-| `cases/<case>/static/` | Mount APK melalui [fs.py](fs.py), dengan opsi `ro,nosuid,nodev,noexec`; berisi APK mentah, manifest terurai, indeks DEX, dan laporan. |
-| `cases/<case>/env/` | Mount `fuse-overlayfs` untuk lingkungan emulator, menggabungkan golden image dengan perubahan pada `upper/`. |
-| `cases/<case>/upper/` | Perubahan lingkungan emulator yang dipertahankan setelah lab berhenti. |
-| `cases/<case>/out/` | PCAP, flow mitmproxy, logcat, dan log proses. |
+| `cases/<case>/static/` | Mount APK dari [fs.py](fs.py). Terdapat file asli, manifest yang sudah di-decode, indeks DEX, dan report. |
+| `cases/<case>/env/` | Environment emulator dari `fuse-overlayfs`, dengan golden image sebagai lower layer. |
+| `cases/<case>/upper/` | Perubahan pada environment emulator selama run. Folder ini tetap ada setelah lab berhenti. |
+| `cases/<case>/out/` | Hasil PCAP, flow mitmproxy, logcat, dan log proses lab. |
 
-FUSE adalah filesystem. Titik capture jaringan berada di **interface `lo` dalam
-network namespace emulator**. Saat lab mulai, `tcpdump` otomatis menulis
-`out/netns.pcap`; Wireshark membaca aliran PCAP tersebut lewat pipe.
+Untuk network capture, interface yang digunakan adalah **`lo` di dalam network
+namespace emulator**. FUSE sendiri merupakan filesystem. Script lab menjalankan
+`tcpdump` pada namespace tersebut, kemudian hasil `netns.pcap` diteruskan ke
+Wireshark.
 
 ```text
 APK asli ── APKFuse ── static/               analisis statis
@@ -46,45 +47,46 @@ Emulator Android
        └─ bridge socket Unix ── mitmproxy pada host ── jaringan tujuan
 ```
 
-Mode normal menyediakan koneksi keluar melalui mitmproxy pada host. Jalankan di
-jaringan analisis yang diizinkan. Opsi `--offline` menghilangkan bridge proxy dan
-DNS ke host. Capture ini memperlihatkan traffic yang mencapai jalur proxy/DNS
-tersebut, bukan seluruh paket pada virtual NIC Android; traffic UDP lain atau
-traffic yang mengabaikan proxy tidak otomatis tercakup. Port ADB `5555`
-dikecualikan dari capture oleh script lab.
+Pada mode normal, koneksi keluar melalui bridge proxy/DNS ke mitmproxy di host.
+Gunakan jaringan analisis yang diizinkan. Jika memakai `--offline`, bridge proxy
+dan DNS ke host tidak dibuat.
 
-### Kontrol hardening dan batas penerapannya
+Capture ini mencatat traffic yang masuk ke jalur proxy/DNS tersebut. Paket pada
+virtual NIC Android, UDP lain, atau koneksi yang mengabaikan proxy belum tentu
+terlihat pada PCAP ini. Traffic ADB di port `5555` juga dikecualikan oleh script.
 
-| Area | Kontrol pada implementasi saat ini | Yang perlu dibuktikan saat pengujian |
-| --- | --- | --- |
-| Integritas sampel | SHA-256 dan mount APK `ro,nosuid,nodev,noexec` pada [fs.py](fs.py). | Hash APK tetap sama; opsi mount aktif dan operasi tulis ditolak. |
-| Perubahan emulator | Golden image menjadi lower layer `fuse-overlayfs`; perubahan ditulis ke `upper/`. | Perubahan run tersimpan pada kasus yang sesuai; run bersih memakai lingkungan tanpa kasus lama. |
-| Isolasi proses dan filesystem | Namespace serta bind mount dipilih oleh `_ns_argv()` dan `_bwrap_argv()` pada [lab.py](lab.py). | Proses dan path host yang tidak dipetakan tidak dapat diakses dari sandbox emulator. |
-| Jalur jaringan | Namespace terpisah, bridge proxy/DNS, dan opsi `--offline`. | Mode offline tidak memiliki bridge keluar; mode normal memakai jalur proxy yang dicatat. |
-| Observabilitas | PCAP, flow mitmproxy, logcat, dan metadata run. | Request dan respons dapat dikorelasikan dengan waktu run dan sampel yang benar. |
+### Bagian hardening yang perlu dicek
 
-Tabel tersebut menjelaskan konfigurasi dan target verifikasi, bukan hasil audit
-keamanan yang sudah lulus. Mode normal saat ini **belum menerapkan allowlist
-tujuan C2** pada proxy, sehingga koneksi yang melewati proxy masih dapat menuju
-tujuan lain yang dijangkau host. Script juga memetakan `/etc` dan `/sys` host
-secara read-only, memberi akses `/dev/kvm`, serta meneruskan socket X11 ketika
-mode GUI dipakai. Akses tersebut perlu dinilai dalam threat model lab.
+Pada mount APK terdapat opsi `ro,nosuid,nodev,noexec`. Cek apakah opsi ini aktif,
+operasi tulis ditolak, dan hash APK tetap sama. Pada emulator, perubahan
+filesystem seharusnya masuk ke `upper/`, sehingga golden image dapat dipakai
+sebagai dasar untuk run berikutnya.
 
-Untuk penguatan lanjutan, evaluasi pembatasan egress ke server lab yang
-diizinkan, minimalkan path dan perangkat host yang dipetakan, serta tentukan
-kebijakan syscall dan batas resource. Kontrol lanjutan ini belum dikonfigurasi
-oleh panduan ini. Penentuan kebijakan tetap menjadi tanggung jawab pembangun
-sandbox, sebagaimana dijelaskan dalam
-[dokumentasi keamanan bubblewrap](https://github.com/containers/bubblewrap#sandbox-security).
+Isolasi proses dan path host diatur pada `_ns_argv()` dan `_bwrap_argv()` dalam
+[lab.py](lab.py). Bagian ini perlu diuji dari sandbox emulator: cek proses yang
+terlihat, path yang dapat diakses, dan apakah aksesnya sesuai bind mount yang
+dibuat. Simpan hasilnya bersama log run dan capture.
 
-## 2. Siapkan host Linux
+Untuk network, mode normal saat ini belum memiliki **allowlist tujuan C2**.
+Traffic melalui proxy masih dapat menuju alamat lain yang bisa dijangkau host.
+Script juga membuka `/etc` dan `/sys` secara read-only, memberi akses ke
+`/dev/kvm`, dan meneruskan socket X11 jika emulator dijalankan dengan GUI.
+Akses ini tetap perlu diperhitungkan saat menilai isolasi lab.
 
-Jalur setup di bawah ditujukan untuk **Arch Linux x86_64**, sesuai tata letak
-`/usr`, `/lib`, dan `/lib64` yang digunakan script. Diperlukan akses ke `/dev/kvm`,
-`/dev/fuse`, serta dukungan user/network namespace. Untuk host berupa VM, KVM
-memerlukan virtualisasi bertingkat yang tersedia dari hypervisor.
+Jika dilanjutkan untuk hardening, bagian yang perlu diperketat antara lain
+tujuan egress, path/perangkat host yang dipetakan, kebijakan syscall, dan batas
+resource. Kontrol tambahan tersebut belum dikonfigurasi di sini. Penjelasan
+mengenai pengaturan sandbox ada pada
+[dokumentasi bubblewrap](https://github.com/containers/bubblewrap#sandbox-security).
 
-Clone repository jika belum ada:
+## 2. Environment & Tooling — Host
+
+Setup ini menggunakan **Arch Linux x86_64**, mengikuti path `/usr`, `/lib`, dan
+`/lib64` yang dipakai script. Pastikan `/dev/kvm`, `/dev/fuse`, serta user/network
+namespace dapat digunakan. Jika host berupa VM, akses KVM juga bergantung pada
+nested virtualization dari hypervisor.
+
+Clone repository jika belum tersedia:
 
 ```bash
 git clone --filter=blob:none --sparse https://github.com/aryarefman/forensik-digital.git
@@ -92,7 +94,7 @@ cd forensik-digital || exit
 git sparse-checkout set apkfuse
 ```
 
-Pasang dependensi host:
+Install dependency host:
 
 ```bash
 sudo pacman -S --needed base-devel python python-pip \
@@ -101,19 +103,21 @@ sudo pacman -S --needed base-devel python python-pip \
   libx11 libxcb libxkbcommon-x11 libpulse nss mesa
 ```
 
-Paket GUI dan CLI Wireshark tersedia melalui
-[repository resmi Arch](https://archlinux.org/packages/extra/x86_64/wireshark-qt/).
-Untuk akses helper capture pada paket Arch, tambahkan pengguna ke grup yang
-disediakan paket, lalu logout/login agar keanggotaan berlaku:
+Paket Wireshark GUI dan CLI tersedia di
+[repository Arch](https://archlinux.org/packages/extra/x86_64/wireshark-qt/).
+Tambahkan user ke grup capture, kemudian logout/login agar perubahan grup
+berlaku:
 
 ```bash
 sudo gpasswd -a "$(id -un)" wireshark
 ```
 
-Langkah grup ini mengikuti
-[panduan izin capture Wireshark](https://wiki.wireshark.org/CaptureSetup/CapturePrivileges#arch-linux-and-derivatives).
-Java harus tersedia melalui `java` di `/usr/bin`, karena sandbox membersihkan
+Pengaturan grup mengikuti
+[panduan capture privileges Wireshark](https://wiki.wireshark.org/CaptureSetup/CapturePrivileges#arch-linux-and-derivatives).
+Untuk Java, pastikan command `java` tersedia di `/usr/bin`. Sandbox membersihkan
 environment sebelum menjalankan `avdmanager`.
+
+Cek akses perangkat dan namespace:
 
 ```bash
 java -version
@@ -123,17 +127,16 @@ test -w "/run/user/$(id -u)" && echo "Runtime directory tersedia"
 unshare --user --map-root-user --net --pid --fork true
 ```
 
-Jika pemeriksaan gagal, selesaikan izin perangkat atau kebijakan namespace
-terlebih dahulu. Gunakan sesi login pengguna biasa agar `/run/user/<uid>`
-tersedia; jalankan lab sebagai pengguna tersebut. Penjelasan KVM tersedia pada
-[dokumentasi akselerasi Android Emulator](https://developer.android.com/studio/run/emulator-acceleration).
+Jika ada pengecekan yang gagal, periksa izin perangkat atau konfigurasi
+namespace terlebih dahulu. Jalankan lab dari sesi login user biasa agar
+`/run/user/<uid>` tersedia. Untuk kebutuhan KVM, lihat
+[dokumentasi akselerasi emulator](https://developer.android.com/studio/run/emulator-acceleration).
 
-## 3. Siapkan Python
+## 3. Setup Python environment
 
-Versi dependensi berikut berasal dari environment lokal yang digunakan untuk
-memeriksa panduan ini: Python `3.14.7`, pyfuse3 `3.5.0`, Trio `0.34.0`, dan
-mitmproxy `12.3.1`. Penggunaan interpreter lain memerlukan pemeriksaan
-kompatibilitas dependensi.
+Versi yang tersedia pada environment pengecekan: Python `3.14.7`, pyfuse3
+`3.5.0`, Trio `0.34.0`, dan mitmproxy `12.3.1`. Jika memakai versi interpreter
+lain, cek kembali kompatibilitas dependency-nya.
 
 ```bash
 python -m venv .venv
@@ -145,17 +148,17 @@ python -m venv .venv
 .venv/bin/python -m apkfuse.lab --help
 ```
 
-Binding yang dipakai adalah [pyfuse3](https://github.com/libfuse/pyfuse3), bukan
-`fusepy`. Build binding memerlukan header libfuse3, compiler, dan `pkg-config`;
-lihat [dependensi pyfuse3](https://www.rath.org/pyfuse3-docs/install.html).
+Script menggunakan binding [pyfuse3](https://github.com/libfuse/pyfuse3).
+Untuk build, diperlukan header libfuse3, compiler, dan `pkg-config`; detailnya
+ada pada [dependency pyfuse3](https://www.rath.org/pyfuse3-docs/install.html).
 
-## 4. Pasang Android SDK
+## 4. Setup Android SDK
 
-Unduh paket **Command line tools only → Linux** dari
-[halaman resmi Android Studio](https://developer.android.com/studio#command-line-tools-only).
-Masukkan lokasi ZIP yang sudah diunduh saat diminta. Jika
-`base/sdk/cmdline-tools/latest/bin/avdmanager` sudah tersedia, lewati blok
-ekstraksi ini.
+Download **Command line tools only → Linux** dari
+[halaman Android Studio](https://developer.android.com/studio#command-line-tools-only).
+Masukkan path ZIP hasil download ketika diminta. Jika
+`base/sdk/cmdline-tools/latest/bin/avdmanager` sudah ada, bagian ekstraksi ini
+bisa dilewati.
 
 ```bash
 read -r -p "Lokasi ZIP Android Command-Line Tools Linux: " LAB_SDK_TOOLS_ZIP
@@ -167,7 +170,7 @@ mv "$LAB_SDK_TMP/cmdline-tools" base/sdk/cmdline-tools/latest
 rmdir "$LAB_SDK_TMP"
 ```
 
-Setujui lisensi, kemudian pasang komponen yang diminta `lab.py`:
+Setelah itu, setujui lisensi dan install package SDK:
 
 ```bash
 base/sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root="$PWD/base/sdk" --licenses
@@ -179,15 +182,17 @@ test -x base/sdk/cmdline-tools/latest/bin/avdmanager
 base/sdk/emulator/emulator -accel-check
 ```
 
-System image harus `google_apis` API 33 x86_64 seperti konstanta `SYSTEM_IMAGE`
-di script. Lab membutuhkan akses `adb root` untuk menyiapkan sertifikat CA;
-jangan menggantinya dengan image Google Play. Lokasi SDK harus `base/sdk/`,
-karena lokasi ini ditentukan oleh kode. Syntax instalasi paket dan pengaturan
-`--sdk_root` dirujuk dari [dokumentasi sdkmanager](https://developer.android.com/tools/sdkmanager).
+System image yang digunakan adalah `google_apis` API 33 x86_64, sesuai
+`SYSTEM_IMAGE` pada `lab.py`. Image ini diperlukan untuk proses `adb root`
+saat memasang CA; jangan diganti dengan image Google Play. Path SDK tetap di
+`base/sdk/` karena script mengacu ke lokasi tersebut.
 
-## 5. Ekstrak dan verifikasi APK asli
+Untuk syntax package dan `--sdk_root`, lihat
+[dokumentasi sdkmanager](https://developer.android.com/tools/sdkmanager).
 
-ZIP hanya berisi `undangan-g03.apk`, tanpa APK patched atau artefak kasus lain.
+## 5. Cek Hash Integrity & flow APK
+
+Ekstrak APK asli dari ZIP. Arsip ini berisi satu file `undangan-g03.apk`.
 
 ```bash
 mkdir -p samples
@@ -197,10 +202,10 @@ printf '%s  %s\n' \
   'samples/undangan-g03.apk' | sha256sum -c -
 ```
 
-Hasil yang diharapkan: `samples/undangan-g03.apk: OK`.
+Hasil pengecekan seharusnya menampilkan `samples/undangan-g03.apk: OK`.
 
-Di **setiap terminal baru**, masuk ke root repository dan jalankan blok variabel
-berikut agar contoh selanjutnya menunjuk kasus yang sama:
+Pada **setiap terminal baru**, masuk ke root repository lalu set variabel
+berikut agar command mengarah ke kasus yang sama:
 
 ```bash
 LAB_APK="$PWD/samples/undangan-g03.apk"
@@ -208,72 +213,74 @@ LAB_CASE="$(sha256sum "$LAB_APK" | cut -c1-12)"
 LAB_OUT="$PWD/cases/$LAB_CASE/out"
 ```
 
-Untuk sampel ini, `LAB_CASE` bernilai `0ece697fcdbb`.
+Untuk APK ini, nilai `LAB_CASE` adalah `0ece697fcdbb`.
 
-### Telusuri alur reverse engineering sebelum menjalankan sampel
+### Core findings dari reverse engineering
 
-Pada [APK asli](undangan-g03.zip), alur `MainActivity.onCreate()` memanggil
-`sync()` pada `classes3.dex`. Tinjau kelas tersebut dan `BuildConfig` dengan
-decompiler DEX untuk mencatat endpoint, metode, body request, dan pengolahan
-respons. Alur yang menjadi dasar langkah dinamis berikut adalah:
+Pada [APK asli](undangan-g03.zip), `MainActivity.onCreate()` memanggil `sync()`
+yang terdapat di `classes3.dex`. Dari hasil dekompilasi kelas ini dan
+`BuildConfig`, terlihat alur request berikut:
 
-1. Aplikasi membuka endpoint C2 dari `BuildConfig.C2` dan menetapkan metode
-   `POST` dengan `Content-Type: application/json`.
-2. Body JSON memuat `chat_id`, `text`, dan `model`. Pada sampel asli, `chat_id`
-   bernilai `g03`, `text` bernilai `g03 online`, dan `model` diambil dari
-   `Build.MODEL`.
-3. Setelah menerima respons, aplikasi membaca field `result.text` dan menulisnya
-   ke logcat dengan awalan `payload=`. Pada skenario challenge ini, flag yang
-   dicari diperoleh dari respons C2 tersebut.
+1. Endpoint diambil dari `BuildConfig.C2`, lalu aplikasi menggunakan **POST
+   Method** dengan `Content-Type: application/json`.
+2. Body request berisi `chat_id`, `text`, dan `model`. Nilai pada sampel asli
+   adalah `chat_id: g03`, `text: g03 online`, serta model dari `Build.MODEL`.
+3. Respons dibaca dari field `result.text`, kemudian dicatat pada logcat dengan
+   awalan `payload=`. Pada challenge ini, flag didapat dari respons tersebut.
 
-Dengan demikian, membaca URL di APK merupakan bagian analisis statis. Untuk
-memperoleh flag melalui alur aplikasi, server C2 lab harus dapat dijangkau dan
-request **POST beserta body yang sesuai** harus diterima server. Membuka URL
-melalui browser dengan GET tidak mereproduksi request aplikasi.
+POST dikirim otomatis oleh APK ketika activity dijalankan. Dari proses reverse
+engineering, kita mengetahui tujuan dan bentuk request-nya, lalu mencocokkan
+hasil dynamic analysis dengan capture. Mengirim POST secara manual dari host
+saja belum memperlihatkan perilaku APK di dalam environment lab.
 
-Mode `--offline` berguna untuk mengevaluasi perilaku tanpa koneksi keluar,
-tetapi tidak dapat mengambil flag dari respons C2. Gunakan mode normal untuk
-tahap komunikasi dengan server lab, sambil tetap mengevaluasi pembatasan
-egress. Alur perolehannya adalah **reverse engineering → request POST →
-respons C2 → validasi flag dan bukti**, disertai penilaian hardening pada setiap
-tahap yang relevan.
+Server C2 harus dapat dijangkau dan menerima body request yang sesuai. Membuka
+URL-nya dengan GET dari browser tidak menjalankan flow yang sama. Jika memakai
+`--offline`, perilaku tanpa koneksi keluar masih bisa diperiksa, tetapi flag
+dari respons C2 tidak dapat diambil pada run tersebut.
 
-## 6. Inisialisasi lab satu kali
+Flow yang diikuti: **reverse engineering APK → running APK → POST ke C2 →
+capture respons → cek flag dan logcat**. Selama proses ini, hasil pengecekan
+hardening juga tetap dicatat.
+
+## 6. Init lab — Golden image
+
+Jalankan sekali untuk menyiapkan dasar environment:
 
 ```bash
 .venv/bin/python -m apkfuse.lab init --headless
 ```
 
-Proses ini membuat AVD `lab`, menyiapkan kunci ADB khusus lab, membuat CA
-mitmproxy, memasangnya ke image Android, kemudian mematikan emulator golden.
-Selesai ketika muncul `golden image ready in .../base/golden`.
+Proses ini membuat AVD `lab`, kunci ADB khusus lab, dan CA mitmproxy. CA dipasang
+ke image Android, lalu emulator golden dimatikan. Tunggu sampai terdapat pesan
+`golden image ready in .../base/golden`.
 
-Jika golden image sudah ada, lewati tahap ini. `init --force` ditujukan untuk
-membangun ulang golden image, sehingga tidak diperlukan untuk run harian.
-Log inisialisasi berada di `base/init-logs/`.
+Jika golden image sudah tersedia, langsung lanjut ke langkah berikutnya.
+`init --force` digunakan jika memang ingin membangun ulang golden image.
+Log proses init ada di `base/init-logs/`.
 
-## 7. Jalankan emulator dari Terminal A
+## 7. Running emulator — Terminal A
 
 ```bash
 .venv/bin/python -m apkfuse.lab run "$LAB_APK" --headless
 ```
 
-Biarkan terminal ini terbuka. Tunggu sampai muncul:
+Biarkan Terminal A tetap berjalan. Tunggu pesan berikut:
 
 ```text
 ready: <nama-paket> installed in an isolated emulator
 ```
 
-APK sudah terpasang, tetapi activity-nya belum diluncurkan. Urutan ini memberi
-waktu untuk menyambungkan Wireshark sebelum memicu aplikasi. Capture sudah
-berjalan sejak namespace lab dibuat, termasuk saat Android boot.
+Pada tahap ini APK sudah ter-install, tetapi activity belum dijalankan karena
+command di atas tidak memakai `--launch`. Sambungkan Wireshark terlebih dahulu
+agar traffic saat aplikasi mulai berjalan bisa diikuti. `tcpdump` sendiri sudah
+aktif sejak namespace lab dibuat, termasuk ketika Android boot.
 
-Jika membutuhkan jendela emulator, jalankan perintah yang sama tanpa
-`--headless` pada sesi X11/XWayland dengan `DISPLAY` dan akses Xauthority yang
-valid. Script meneruskan socket X11, bukan socket Wayland. Arti opsi emulator
-dirujuk dari [panduan command line Android Emulator](https://developer.android.com/studio/run/emulator-commandline).
+Untuk menampilkan jendela emulator, jalankan tanpa `--headless` pada sesi
+X11/XWayland dengan `DISPLAY` dan akses Xauthority yang sesuai. Script
+meneruskan socket X11. Keterangan opsi emulator ada pada
+[dokumentasi command line emulator](https://developer.android.com/studio/run/emulator-commandline).
 
-Selama lab aktif, hasil mount statis bisa diperiksa dari terminal lain:
+Dari terminal lain, cek hasil mount selama lab masih aktif:
 
 ```bash
 cat "cases/$LAB_CASE/static/manifest.facts"
@@ -283,42 +290,41 @@ findmnt -T "cases/$LAB_CASE/static"
 findmnt -T "cases/$LAB_CASE/env"
 ```
 
-Untuk objective hardening, simpan hasil pemeriksaan mount dan cocokkan dengan
-kontrol pada langkah 1. Kehadiran direktori `static/` atau `env/` saja belum
-membuktikan bahwa mount dan opsi isolasinya aktif.
+Simpan hasil `findmnt` untuk melihat filesystem dan opsi mount yang benar-benar
+aktif. Adanya folder `static/` atau `env/` saja belum menunjukkan bahwa proses
+mount berhasil.
 
-## 8. Hubungkan Wireshark dari Terminal B
+## 8. Capturing traffic — Wireshark, Terminal B
 
-Jalankan ulang blok variabel dari langkah 5. Pastikan PCAP sudah dibuat:
+Set kembali variabel pada langkah 5, lalu cek file PCAP dan buka Wireshark:
 
 ```bash
 test -s "$LAB_OUT/netns.pcap"
 tail -c +1 -f "$LAB_OUT/netns.pcap" | wireshark -k -i -
 ```
 
-`tail` mengirim file dari byte pertama, termasuk header PCAP, lalu mengikuti
-paket baru. `-i -` membuat Wireshark membaca stdin dan `-k` langsung memulai
-capture. Cara ini mengikuti
-[panduan capture melalui pipe Wireshark](https://wiki.wireshark.org/CaptureSetup/Pipes#stdin)
-dan [manual Wireshark](https://www.wireshark.org/docs/man-pages/wireshark.html).
+`tail -c +1` membaca dari byte pertama sehingga header PCAP ikut terkirim.
+Opsi `-f` mengikuti data baru, sedangkan Wireshark memakai `-i -` untuk membaca
+stdin dan `-k` untuk mulai capture. Cara ini mengikuti
+[panduan pipe capture](https://wiki.wireshark.org/CaptureSetup/Pipes#stdin) dan
+[manual Wireshark](https://www.wireshark.org/docs/man-pages/wireshark.html).
 
-Wireshark dijalankan sebagai pengguna biasa. Lab sudah melakukan capture di
-namespace yang benar; memilih `lo`, `eth0`, atau Wi-Fi **milik host** tidak
-memberikan sudut pandang jaringan yang sama.
+Wireshark bisa dibuka sebagai user biasa. Data capture sudah diambil oleh lab
+dari namespace emulator. Jadi, memilih interface `lo`, `eth0`, atau Wi-Fi pada
+host tidak memberikan capture dari namespace yang sama.
 
-Mode `-i` tetap menjalankan helper `dumpcap`. Jika muncul `Couldn't run dumpcap
-in child process: Permission denied`, periksa izin eksekusi, grup capture, dan
-capability helper sesuai kebijakan host; lihat
-[panduan izin capture Wireshark](https://wiki.wireshark.org/CaptureSetup/CapturePrivileges).
-Named pipe tidak mengatasi penolakan eksekusi helper.
+Jika muncul `Couldn't run dumpcap in child process: Permission denied`, cek
+izin eksekusi, grup capture, dan capability helper `dumpcap`. Mode `-i` tetap
+menjalankan helper ini meskipun input berasal dari pipe. Pengaturannya ada pada
+[capture privileges](https://wiki.wireshark.org/CaptureSetup/CapturePrivileges).
 
-Untuk memeriksa aliran paket dari terminal tanpa menjalankan helper capture:
+Untuk melihat aliran paket dari terminal tanpa helper capture, gunakan TShark:
 
 ```bash
 tail -c +1 -f "$LAB_OUT/netns.pcap" | tshark -l -r -
 ```
 
-Jika build Wireshark tidak menerima stdin, gunakan named pipe. Dari Terminal B:
+Jika stdin tidak diterima oleh build Wireshark yang dipakai, coba named pipe:
 
 ```bash
 LAB_PIPE_DIR="$(mktemp -d)"
@@ -331,43 +337,45 @@ rm "$LAB_PIPE_DIR/traffic.pcap"
 rmdir "$LAB_PIPE_DIR"
 ```
 
-Filter tampilan yang dapat digunakan:
+Named pipe tetap memerlukan helper yang bisa dijalankan; cara ini tidak
+menyelesaikan penolakan izin `dumpcap`.
 
-| Filter | Yang ditampilkan |
-| --- | --- |
-| `dns` | Query dan respons DNS. |
-| `http.request || http.response` | Request dan respons HTTP yang dapat didiseksi. |
-| `http.request.method == "POST"` | Request POST yang perlu dicocokkan dengan endpoint dan body hasil reverse engineering. |
-| `http.request.method == "CONNECT"` | Pembentukan tunnel proxy HTTP. |
-| `tcp.port == 8080` | Koneksi ke proxy pada namespace lab. |
-| `tls` | Paket TLS yang dikenali Wireshark. |
+Filter yang bisa dipakai saat melihat hasil capture:
 
-PCAP juga berisi traffic Android dan aplikasi sistem. Gunakan waktu peluncuran,
-hostname, dan stream untuk membedakan traffic sampel dari traffic latar belakang.
-Untuk mengikuti percakapan, pilih paket lalu **Follow → TCP Stream**.
+- `dns` untuk query dan respons DNS.
+- `http.request || http.response` untuk request dan respons HTTP.
+- `http.request.method == "POST"` untuk mencari POST dari aplikasi.
+- `http.request.method == "CONNECT"` untuk pembentukan tunnel proxy.
+- `tcp.port == 8080` untuk koneksi ke proxy di namespace lab.
+- `tls` untuk paket TLS yang dikenali Wireshark.
 
-## 9. Buka konsol dan picu aplikasi dari Terminal C
+Terdapat traffic Android dan aplikasi sistem pada PCAP yang sama. Cocokkan
+waktu aplikasi dijalankan, hostname, dan nomor stream sebelum menyimpulkan
+bahwa request berasal dari sampel. Untuk membaca percakapan, pilih paket lalu
+**Follow → TCP Stream**.
 
-Jalankan ulang blok variabel dari langkah 5. Periksa Android terlebih dahulu:
+## 9. ADB console & trigger APK — Terminal C
+
+Set kembali variabel dari langkah 5, kemudian cek status boot dan buka shell:
 
 ```bash
 .venv/bin/python -m apkfuse.lab adb "$LAB_CASE" shell getprop sys.boot_completed
 .venv/bin/python -m apkfuse.lab adb "$LAB_CASE" shell
 ```
 
-Perintah pertama seharusnya menghasilkan `1`. Perintah kedua membuka shell
-Android interaktif. Ketik `exit` untuk kembali ke host. Wrapper `lab adb`
-menggunakan serial kasus dan server ADB khusus pada port `5038`.
+Command pertama seharusnya menghasilkan `1`. Command kedua membuka shell
+Android; gunakan `exit` untuk kembali ke host. Wrapper `lab adb` mengambil
+serial dari kasus yang sedang berjalan dan menggunakan server ADB port `5038`.
 
-Untuk menguji jalur capture terlebih dahulu, buka URL uji dari emulator:
+Untuk mengecek jalur capture terlebih dahulu, buka URL uji dari emulator:
 
 ```bash
 .venv/bin/python -m apkfuse.lab adb "$LAB_CASE" shell am start \
   -a android.intent.action.VIEW -d http://example.com/
 ```
 
-Lihat request di Wireshark, kemudian ambil nama paket dari manifest hasil mount
-dan jalankan activity utama sampel:
+Setelah request terlihat pada Wireshark, ambil nama package dari manifest hasil
+mount dan jalankan activity utama APK:
 
 ```bash
 LAB_PACKAGE="$(.venv/bin/python -c \
@@ -377,22 +385,23 @@ LAB_PACKAGE="$(.venv/bin/python -c \
   -p "$LAB_PACKAGE" -c android.intent.category.LAUNCHER 1
 ```
 
-Jika ingin langsung meluncurkan aplikasi pada run berikutnya, tambahkan
-`--launch` pada perintah `lab run`. Lihat log Android dengan:
+Pada run berikutnya, opsi `--launch` bisa ditambahkan ke `lab run` jika ingin
+activity langsung dijalankan. Untuk melihat log Android:
 
 ```bash
 .venv/bin/python -m apkfuse.lab adb "$LAB_CASE" logcat -v threadtime
 ```
 
-### Validasi POST ke C2 dan asal flag
+### Cek POST Method ke C2
 
-Peluncuran activity memicu alur `sync()` yang ditelusuri pada langkah 5. Di
-Wireshark, gunakan filter `http.request.method == "POST"`, lalu cocokkan host,
-path, dan body JSON dengan hasil reverse engineering. Pilih **Follow → TCP
-Stream** untuk membaca request beserta respons pada koneksi yang sama.
+Saat activity berjalan, `sync()` mengirim request yang sebelumnya ditemukan
+pada proses reverse engineering. Gunakan filter
+`http.request.method == "POST"`, lalu cocokkan host, path, dan body JSON-nya.
+Buka **Follow → TCP Stream** untuk membaca request dan respons pada koneksi
+tersebut.
 
-Ringkasan request dan respons juga dapat dibaca dari PCAP; hasil lengkap
-sebaiknya diperiksa setelah lab berhenti:
+Ringkasan dari PCAP dan logcat juga bisa dicek dengan command berikut. Untuk
+hasil lengkap, baca kembali setelah lab berhenti:
 
 ```bash
 tshark -r "$LAB_OUT/netns.pcap" \
@@ -402,20 +411,21 @@ tshark -r "$LAB_OUT/netns.pcap" \
 grep -F 'payload=' "$LAB_OUT/logcat.txt"
 ```
 
-Cocokkan nomor `tcp.stream` POST ke C2 dengan responsnya. Status `200` saja
-belum membuktikan flag ditemukan: periksa isi `result.text`, lalu bandingkan
-dengan `payload=` pada logcat. Request POST ke host lain dari aplikasi sistem
-juga tidak menjadi bukti komunikasi C2 sampel.
+Cocokkan nomor `tcp.stream` pada POST ke C2 dengan responsnya. Jika status
+respons `200`, lanjut periksa isi `result.text` dan bandingkan dengan
+`payload=` pada logcat. Status `200` saja belum menunjukkan bahwa flag sudah
+didapat, dan POST dari aplikasi sistem ke host lain bukan bukti request C2
+sampel.
 
-Jika server tidak terjangkau, catat kegagalan koneksi dan hasil observasi
-isolasi sebagai temuan lab. Objective perolehan flag belum tercapai pada run
-tersebut, tetapi pengujian hardening tetap dapat didokumentasikan.
+Jika koneksi ke server gagal, catat error dan hasil pengecekan environment.
+Pada run tersebut flag belum didapat dari C2, tetapi temuan mengenai isolasi
+lab masih dapat dilaporkan.
 
-### Opsional: konsol kontrol emulator pada port 5554
+### Opsional — Emulator console pada port 5554
 
-Konsol kontrol emulator berbeda dari shell Android. Port `5554` berada di dalam
-namespace, sehingga koneksi langsung ke `127.0.0.1:5554` milik host tidak
-menjangkaunya. Untuk masuk melalui namespace run yang sama:
+Console kontrol emulator berbeda dengan shell Android. Port `5554` berada di
+namespace lab, sehingga koneksi ke `127.0.0.1:5554` dari host tidak langsung
+menjangkaunya. Untuk membuka console pada namespace kasus yang sama:
 
 ```bash
 LAB_NS_PID="$(pgrep -u "$(id -u)" -f \
@@ -425,99 +435,103 @@ cat "cases/$LAB_CASE/env/.emulator_console_auth_token"
 nsenter --target "$LAB_NS_PID" --user --net -- socat - TCP:127.0.0.1:5554
 ```
 
-Jika `LAB_NS_PID` kosong, pastikan Terminal A masih menjalankan kasus ini.
-Setelah tersambung, masukkan `auth <token-yang-dibaca-dari-file>`, lalu coba
-`avd name` atau `ping`. Ketik `quit` untuk keluar. Lokasi token mengikuti
-`HOME=/env` yang ditetapkan sandbox; autentikasi dan perintah konsol dirujuk dari
-[dokumentasi konsol Android Emulator](https://developer.android.com/studio/run/emulator-console).
+Jika `LAB_NS_PID` kosong, cek apakah run pada Terminal A masih aktif. Setelah
+tersambung, masukkan `auth <token-yang-dibaca-dari-file>`, kemudian coba
+`avd name` atau `ping`. Gunakan `quit` untuk keluar.
 
-## 10. Hentikan dan simpan hasil
+File token mengikuti `HOME=/env` yang dipakai sandbox. Penjelasan autentikasi
+dan command console ada pada
+[dokumentasi emulator console](https://developer.android.com/studio/run/emulator-console).
 
-Hentikan capture pada jendela Wireshark dan tutup pembaca pipe di Terminal B.
-Di Terminal A, tekan **Ctrl+C** lalu tunggu sampai lab selesai membersihkan
-proses dan mount. Jika Terminal C masih menampilkan logcat, hentikan stream itu
-dengan Ctrl+C juga.
+## 10. Stop lab & hasil capture
 
-Hasil analisis tetap berada di:
+Stop capture pada Wireshark, lalu tutup pembaca pipe di Terminal B. Setelah itu,
+tekan **Ctrl+C** pada Terminal A dan tunggu sampai lab selesai membersihkan
+proses serta mount. Jika logcat masih berjalan pada Terminal C, hentikan stream
+tersebut dengan Ctrl+C juga.
 
-| Artefak | Isi |
+Hasil run tetap tersimpan pada folder kasus:
+
+| Artefak | Keterangan |
 | --- | --- |
-| `out/netns.pcap` | Paket pada loopback namespace lab. |
-| `out/flows.mitm` | Flow yang ditangani mitmproxy dalam mode normal. |
-| `out/logcat.txt` | Log Android yang direkam lab. |
-| `out/mitm.log` | Log proxy, termasuk error koneksi atau sertifikat. |
-| `out/emulator.log` | Log boot emulator dan proses namespace. |
+| `out/netns.pcap` | Capture pada loopback namespace lab. |
+| `out/flows.mitm` | Flow yang ditangani mitmproxy pada mode normal. |
+| `out/logcat.txt` | Log Android selama run. |
+| `out/mitm.log` | Log proxy, termasuk error koneksi dan sertifikat. |
+| `out/emulator.log` | Log boot dan proses namespace emulator. |
 | `out/apkfuse.log` | Log mount APKFuse. |
-| `out/runs.jsonl` | Metadata mulai/berhenti dan nama paket per run. |
-| `upper/` | Perubahan filesystem lingkungan emulator. |
+| `out/runs.jsonl` | Metadata mulai/berhenti dan nama package per run. |
+| `upper/` | Perubahan filesystem environment emulator. |
 
-Buka ulang PCAP atau baca ringkasannya:
+Buka kembali PCAP atau lihat ringkasan protokol:
 
 ```bash
 wireshark -r "$LAB_OUT/netns.pcap"
 tshark -r "$LAB_OUT/netns.pcap" -q -z io,phs
 ```
 
-Untuk melihat HTTP/HTTPS yang berhasil diintersepsi mitmproxy:
+Untuk membaca HTTP/HTTPS yang berhasil diintersepsi mitmproxy:
 
 ```bash
 .venv/bin/mitmweb --set confdir="$PWD/base/mitmproxy" \
   --no-server -r "$LAB_OUT/flows.mitm"
 ```
 
-Pemasangan CA di Android tidak otomatis membuat payload TLS pada PCAP menjadi
-plaintext. Flow mitmproxy hanya dapat dibaca jika aplikasi menerima CA dan
-intersepsi berhasil; certificate pinning atau kebijakan trust aplikasi dapat
-membatasinya. Lihat [penjelasan sertifikat mitmproxy](https://docs.mitmproxy.org/stable/concepts/certificates/).
+CA yang sudah terpasang di Android tidak otomatis membuat payload TLS di PCAP
+menjadi plaintext. Flow bisa dibaca jika aplikasi menerima CA dan intersepsi
+berhasil. Certificate pinning atau aturan trust aplikasi masih bisa membuatnya
+gagal; lihat [keterangan sertifikat mitmproxy](https://docs.mitmproxy.org/stable/concepts/certificates/).
 
-Run ulang sampel yang sama melanjutkan `upper/` sebelumnya. `netns.pcap` dan
-`flows.mitm` dibuka lagi untuk run baru, sehingga salin hasil yang ingin
-dipertahankan **setelah lab berhenti**:
+Jika sampel yang sama dijalankan ulang, lab melanjutkan isi `upper/` sebelumnya.
+File `netns.pcap` dan `flows.mitm` dibuka lagi untuk run baru. Jadi, simpan hasil
+yang diperlukan setelah lab benar-benar berhenti:
 
 ```bash
 cp -a "$LAB_OUT" "${LAB_OUT}.saved-$(date +%Y%m%d-%H%M%S)"
 ```
 
-Mulai ulang pembaca pipe setiap run agar Wireshark menerima header PCAP yang
-baru. Menyimpan `out/` saja tidak membuat lingkungan emulator kembali bersih.
-Untuk eksperimen dari golden image yang bersih, gunakan salinan kerja
-repository dengan direktori `base/golden/` dan tanpa direktori kasus lama.
+Pada setiap run, mulai ulang pembaca pipe agar header PCAP yang baru terbaca.
+Backup `out/` menyimpan hasil capture dan log, tetapi tidak mengembalikan
+emulator ke kondisi awal. Untuk run bersih dari golden image, gunakan salinan
+kerja repository dengan `base/golden/` dan tanpa direktori kasus lama.
 
-Laporan akhir lab mencatat dua hasil secara terpisah: **perolehan flag** dengan
-bukti POST dan respons C2, serta **evaluasi hardening** dengan bukti integritas,
-mount, isolasi, dan jalur jaringan. Tandai setiap pemeriksaan hardening sebagai
-lulus, gagal, atau belum diuji berdasarkan pengamatan; konfigurasi pada kode
-saja tidak dihitung sebagai uji yang lulus.
+Pada laporan akhir, catat hasil flag dan hasil hardening. Untuk flag, sertakan
+bukti POST dan respons C2. Untuk hardening, sertakan hasil cek hash, mount,
+isolasi proses, dan jalur network. Beri status lulus, gagal, atau belum diuji
+sesuai hasil pengecekan. Konfigurasi yang ada pada script belum dihitung sebagai
+pengujian yang lulus.
 
-## Jika ada kendala
+## Jika terdapat kendala
 
-| Gejala | Pemeriksaan |
+| Gejala | Yang dicek |
 | --- | --- |
-| `No module named pyfuse3` | Gunakan `.venv/bin/python` dan pasang dependensi langkah 3. |
-| `SDK not found` atau `avdmanager` tidak ada | Periksa struktur `base/sdk/cmdline-tools/latest/bin/` dan ulangi langkah SDK. |
-| Java yang dipakai terlalu lama | Periksa `archlinux-java status`; jika diperlukan, pilih JDK 21 dengan `sudo archlinux-java set java-21-openjdk`. |
-| `/dev/kvm` atau `/dev/fuse` tidak dapat diakses | Periksa virtualisasi, modul perangkat, izin pengguna, dan penerusan perangkat bila host berupa VM/container. |
-| `Operation not permitted` saat `unshare` | Periksa dukungan serta kebijakan user/network namespace host. |
+| `No module named pyfuse3` | Gunakan `.venv/bin/python`, lalu cek dependency pada langkah 3. |
+| `SDK not found` atau `avdmanager` tidak ada | Cek struktur `base/sdk/cmdline-tools/latest/bin/` pada langkah 4. |
+| Versi Java terlalu lama | Cek `archlinux-java status`. Jika diperlukan, pilih JDK 21 dengan `sudo archlinux-java set java-21-openjdk`. |
+| `/dev/kvm` atau `/dev/fuse` tidak dapat diakses | Cek virtualisasi, modul perangkat, izin user, dan penerusan perangkat jika menggunakan VM/container. |
+| `Operation not permitted` saat `unshare` | Cek dukungan dan kebijakan user/network namespace host. |
 | Emulator keluar saat boot | Baca `out/emulator.log` atau `base/init-logs/emulator.log`, lalu cek `emulator -accel-check`. |
-| Wireshark menolak menjalankan `dumpcap` | Periksa izin dan kebijakan capability helper. Gunakan `tshark -l -r -` untuk memeriksa aliran tanpa helper, atau buka PCAP yang sudah tersimpan. |
-| Wireshark menunggu tanpa paket | Pastikan lab aktif, path kasus benar, PCAP berisi lebih dari header, dan run tidak memakai `--offline` bila mengharapkan koneksi keluar. Coba URL uji di langkah 9. |
-| Wireshark melaporkan header tidak valid | Mulai pembaca dari byte pertama dengan `tail -c +1`; jangan gunakan `tail -f` tanpa opsi byte. Coba named pipe jika stdin tidak diterima. |
+| Wireshark gagal menjalankan `dumpcap` | Cek izin dan capability helper. Untuk membaca aliran tanpa helper, gunakan `tshark -l -r -`, atau buka PCAP yang sudah tersimpan. |
+| Wireshark tidak menampilkan paket | Cek run masih aktif, path kasus benar, dan PCAP berisi lebih dari header. Jika perlu koneksi keluar, run harus tanpa `--offline`. Coba URL uji di langkah 9. |
+| Header PCAP tidak valid | Gunakan `tail -c +1` agar pembacaan dimulai dari byte pertama. Coba named pipe jika stdin tidak diterima. |
 | HTTP pada port proxy tidak dikenali | Gunakan **Analyze → Decode As… → HTTP** pada stream proxy TCP yang sesuai. |
-| Request ke server tujuan gagal | Baca `out/mitm.log`, periksa konektivitas host dan ketersediaan server lab. Sampel asli bergantung pada tujuan jaringan yang dikandung APK. |
-| Case dilaporkan masih ter-mount | Hentikan run yang memilikinya. Jika run sudah berhenti dan mount tertinggal, lepas `cases/<case>/env` dan `cases/<case>/static` dengan `fusermount3 -u`. |
+| Request ke C2 gagal | Baca `out/mitm.log`, lalu cek koneksi host dan ketersediaan server lab yang dituju APK. |
+| Case masih ter-mount | Hentikan run pemilik mount. Jika run sudah berhenti tetapi mount tertinggal, gunakan `fusermount3 -u` pada `cases/<case>/env` dan `cases/<case>/static`. |
 
-## Cakupan verifikasi panduan
+## Catatan pengecekan
 
-Perintah disesuaikan dengan [lab.py](lab.py), [fs.py](fs.py), dan
-[__main__.py](__main__.py). Arsip diverifikasi terhadap SHA-256 APK asli,
-entry point CLI diperiksa, dan aliran PCAP lewat pipe diuji dengan rekaman
-yang sudah ada melalui `tail -c +1 -f` dan `tshark -l -r -`, termasuk paket
-yang ditambahkan setelah pembacaan dimulai. Mode capture `-i` terhalang izin
-eksekusi helper `dumpcap` pada environment penulisan ini. Inisialisasi golden
-image, boot emulator, konsol interaktif, GUI Wireshark, dan capture dari run APK
-baru belum dijalankan ulang dalam sesi penulisan ini.
+Command mengikuti [lab.py](lab.py), [fs.py](fs.py), dan
+[__main__.py](__main__.py). Pengecekan yang sudah dilakukan mencakup SHA-256
+APK asli di dalam ZIP, entry point CLI, serta aliran PCAP melalui
+`tail -c +1 -f` dan `tshark -l -r -`. Paket yang ditambahkan setelah pembacaan
+dimulai juga berhasil terbaca.
 
-Penjelasan POST dan pemrosesan `result.text` dicocokkan dengan hasil dekompilasi
-`MainActivity` dari APK asli serta rekaman PCAP lokal yang sudah ada. Rekaman
-tersebut memuat POST dan respons `200` pada stream yang sama; pemeriksaan ini
-tidak menghubungi ulang server C2 dan tidak menjadi bukti audit hardening.
+Pada environment pengecekan, mode `-i` masih ditolak saat menjalankan helper
+`dumpcap`. Init golden image, boot emulator, console interaktif, GUI Wireshark,
+dan capture dari run APK baru belum dijalankan ulang.
+
+POST Method dan pembacaan `result.text` sudah dicocokkan dengan dekompilasi
+`MainActivity` pada APK asli serta PCAP lokal yang tersedia. Pada PCAP terdapat
+POST dan respons `200` pada stream yang sama. Pengecekan ini memakai rekaman
+yang sudah ada, tanpa menghubungi ulang C2, dan belum menjadi hasil audit
+hardening.
